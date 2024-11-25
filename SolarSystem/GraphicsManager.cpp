@@ -4,7 +4,6 @@
 #include "Utils.h"
 #include <iostream>
 
-
 namespace mc
 {
     GraphicsManager::GraphicsManager(const Window& window) {
@@ -19,33 +18,10 @@ namespace mc
         );
     }
 
-    GraphicsManager::~GraphicsManager()
-    {
-        for (auto* shader : vertexShaders_)
-        {
-            if (shader)
-            {
-                shader->Release();
-            }
-        }
-        for (auto* shader : pixelShaders_)
-        {
-            if (shader)
-            {
-                shader->Release();
-            }
-        }
-        if (depthStencilView_) { depthStencilView_->Release(); }
-        if (renderTargetView_) { renderTargetView_->Release(); }
-        if (swapChain_) { swapChain_->Release(); }
-        if (deviceContext_) { deviceContext_->Release(); }
-        if (device_) { device_->Release(); }
-    }
-
     void GraphicsManager::Clear(float r, float g, float b) const
     {
         float clearColor[] = { r, g, b, 1.0f };
-        deviceContext_->ClearRenderTargetView(renderTargetView_, clearColor);
+        deviceContext_->ClearRenderTargetView(renderTargetView_.Get(), clearColor);
     }
 
     void GraphicsManager::Present() const
@@ -71,8 +47,7 @@ namespace mc
         // Create the device and deviceContext
         int deviceFlags = D3D11_CREATE_DEVICE_DEBUG;
         D3D_FEATURE_LEVEL featureLevel;
-        HRESULT result = D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, deviceFlags, 0, 0, D3D11_SDK_VERSION, &device_, &featureLevel, &deviceContext_);
-        if (FAILED(result))
+        if (FAILED(D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, deviceFlags, 0, 0, D3D11_SDK_VERSION, &device_, &featureLevel, &deviceContext_)))
         {
             throw std::runtime_error("Error creating Directx11 device.");
         }
@@ -106,17 +81,13 @@ namespace mc
         swapChainDesc.Flags = 0;
 
         // Create the swap chain
-        IDXGIDevice* dxgiDevice = 0;
-        device_->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgiDevice);
-        IDXGIAdapter* dxgiAdapter = 0;
-        dxgiDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&dxgiAdapter);
-        IDXGIFactory* dxgiFactory = 0;
-        dxgiAdapter->GetParent(__uuidof(IDXGIFactory), (void**)&dxgiFactory);
-        HRESULT result = dxgiFactory->CreateSwapChain(device_, &swapChainDesc, &swapChain_);
-        if (dxgiDevice) dxgiDevice->Release();
-        if (dxgiAdapter) dxgiAdapter->Release();
-        if (dxgiFactory) dxgiFactory->Release();
-        if (FAILED(result))
+        Microsoft::WRL::ComPtr<IDXGIDevice> dxgiDevice;
+        Microsoft::WRL::ComPtr<IDXGIAdapter> dxgiAdapter;
+        Microsoft::WRL::ComPtr<IDXGIFactory> dxgiFactory;
+        device_->QueryInterface(__uuidof(IDXGIDevice), &dxgiDevice);
+        dxgiDevice->GetParent(__uuidof(IDXGIAdapter), &dxgiAdapter);
+        dxgiAdapter->GetParent(__uuidof(IDXGIFactory), &dxgiFactory);
+        if (FAILED(dxgiFactory->CreateSwapChain(device_.Get(), &swapChainDesc, &swapChain_)))
         {
             throw std::runtime_error("Error creating swap chain.");
         }
@@ -125,14 +96,9 @@ namespace mc
     void GraphicsManager::CreateRenderTargetView()
     {
         // create render target view
-        ID3D11Texture2D* backBufferTexture = 0;
-        swapChain_->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBufferTexture);
-        HRESULT result = device_->CreateRenderTargetView(backBufferTexture, 0, &renderTargetView_);
-        if (backBufferTexture)
-        {
-            backBufferTexture->Release();
-        }
-        if (FAILED(result))
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> backBufferTexture;
+        swapChain_->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBufferTexture);
+        if (FAILED(device_->CreateRenderTargetView(backBufferTexture.Get(), 0, &renderTargetView_)))
         {
             throw std::runtime_error("Error creating render target.");
         }
@@ -141,7 +107,7 @@ namespace mc
     void GraphicsManager::CreateDepthStencilView(const Window& window)
     {
         // create the depth stencil texture
-        ID3D11Texture2D* depthStencilTexture = 0;
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> depthStencilTexture;
         D3D11_TEXTURE2D_DESC depthStencilTextureDesc;
         depthStencilTextureDesc.Width = window.Width();
         depthStencilTextureDesc.Height = window.Height();
@@ -154,97 +120,13 @@ namespace mc
         depthStencilTextureDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
         depthStencilTextureDesc.CPUAccessFlags = 0;
         depthStencilTextureDesc.MiscFlags = 0;
-        HRESULT result = device_->CreateTexture2D(&depthStencilTextureDesc, 0, &depthStencilTexture);
-        if (FAILED(result))
+        if (FAILED(device_->CreateTexture2D(&depthStencilTextureDesc, 0, &depthStencilTexture)))
         {
             throw std::runtime_error("Error creating depth stencil texture.");
         }
-        result = device_->CreateDepthStencilView(depthStencilTexture, 0, &depthStencilView_);
-        if (depthStencilTexture)
-        {
-            depthStencilTexture->Release();
-        }
-        if (FAILED(result))
+        if (FAILED(device_->CreateDepthStencilView(depthStencilTexture.Get(), 0, &depthStencilView_)))
         {
             throw std::runtime_error("Error creating depth stencil view.");
         }
-    }
-
-
-    Shader GraphicsManager::CreateVertexShader(const std::string& filepath)
-    {
-        ID3D11VertexShader* shader = nullptr;
-        File shaderFile(filepath);
-        ID3DBlob* shaderCompiled = nullptr;
-        ID3DBlob* errorShader = nullptr;
-        HRESULT result = D3DCompile(shaderFile.data, shaderFile.size,
-            0, 0, 0, "vs_main", "vs_5_0",
-            D3DCOMPILE_ENABLE_STRICTNESS, 0,
-            &shaderCompiled, &errorShader);
-        if (errorShader != 0)
-        {
-            char* errorString = (char*)errorShader->GetBufferPointer();
-            std::cout << "Error conpiling VERTEX SHADER: " << filepath << "\n";
-            std::cout << errorString << "\n";
-            errorShader->Release();
-        }
-        else
-        {
-            result = device_->CreateVertexShader(
-                shaderCompiled->GetBufferPointer(),
-                shaderCompiled->GetBufferSize(), 0,
-                &shader);
-        }
-        if (shaderCompiled)
-        {
-            shaderCompiled->Release();
-            vertexShaders_.push_back(shader);
-            return vertexShaders_.size() - 1;
-        }
-        return -1;
-    }
-
-
-    Shader GraphicsManager::CreatePixelShader(const std::string& filepath)
-    {
-        ID3D11PixelShader* shader = nullptr;
-        File shaderFile(filepath);
-        ID3DBlob* shaderCompiled = nullptr;
-        ID3DBlob* errorShader = nullptr;
-        HRESULT result = D3DCompile(shaderFile.data, shaderFile.size,
-            0, 0, 0, "fs_main", "ps_5_0",
-            D3DCOMPILE_ENABLE_STRICTNESS, 0,
-            &shaderCompiled, &errorShader);
-        if (errorShader != 0)
-        {
-            char* errorString = (char*)errorShader->GetBufferPointer();
-            std::cout << "Error conpiling PIXEL SHADER: " << filepath << "\n";
-            std::cout << errorString << "\n";
-            errorShader->Release();
-        }
-        else
-        {
-            result = device_->CreatePixelShader(
-                shaderCompiled->GetBufferPointer(),
-                shaderCompiled->GetBufferSize(), 0,
-                &shader);
-        }
-        if (shaderCompiled)
-        {
-            shaderCompiled->Release();
-            pixelShaders_.push_back(shader);
-            return pixelShaders_.size() - 1;
-        }
-        return -1;
-    }
-
-    void GraphicsManager::SetVertexShader(Shader shader)
-    {
-        deviceContext_->VSSetShader(vertexShaders_[shader], 0, 0);
-    }
-
-    void GraphicsManager::SetPixelShader(Shader shader)
-    {
-        deviceContext_->PSSetShader(pixelShaders_[shader], 0, 0);
     }
 }

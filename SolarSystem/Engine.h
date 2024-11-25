@@ -3,6 +3,12 @@
 #include "GraphicsManager.h"
 #include "InputManager.h"
 
+#include "VertexShader.h"
+#include "PixelShader.h"
+#include "ConstBuffer.h"
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
+
 namespace mc
 {
     class Engine
