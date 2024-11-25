@@ -7,13 +7,14 @@ cbuffer Matrices : register(b0) {
 struct VS_Input {
     float3 pos : POSITION;
     float3 nor : NORMAL;
-    float4 col : COLOR;
+    float3 tan : TEXCOORD0;
+    float2 uv  : TEXCOORD1;
 };
 
 struct PS_Input {
     float4 pos : SV_POSITION;
     float3 nor : NORMAL;
-    float4 col : COLOR;
+    float2 uv : TEXCOORD0;
 };
 
 PS_Input vs_main(VS_Input i) {
@@ -28,7 +29,7 @@ PS_Input vs_main(VS_Input i) {
     
     o.pos = wPos;
     o.nor = wNor;
-    o.col = i.col;
-
+    o.uv = i.uv;
+    
     return o;
 }

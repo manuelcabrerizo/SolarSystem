@@ -15,6 +15,9 @@ namespace mc
     class ConstBuffer : public Bindable
     {
     public:
+        ConstBuffer(const ConstBuffer&) = delete;
+        ConstBuffer& operator=(const ConstBuffer&) = delete;
+
         ConstBuffer(const GraphicsManager& gm, ConstBufferBind bindTo, const Type& data, unsigned int slot)
             : slot(slot), bindTo(bindTo)
         {

@@ -7,6 +7,9 @@ namespace mc
     class IndexBuffer : public Bindable
     {
     public:
+        IndexBuffer(const IndexBuffer&) = delete;
+        IndexBuffer& operator=(const IndexBuffer&) = delete;
+
         IndexBuffer(const GraphicsManager& gm, unsigned int *indices, unsigned int count);
         void Bind(const GraphicsManager& gm) override;
     private:

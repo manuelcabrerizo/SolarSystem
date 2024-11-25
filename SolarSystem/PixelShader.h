@@ -8,6 +8,9 @@ namespace mc
     class PixelShader : public Bindable
     {
     public:
+        PixelShader(const PixelShader&) = delete;
+        PixelShader& operator=(const PixelShader&) = delete;
+
         PixelShader(const GraphicsManager& gm, const std::string& filepath);
         void Bind(const GraphicsManager& gm) override;
         ID3DBlob* GetByteCode() const { return shaderCompiled.Get(); }

@@ -7,6 +7,9 @@ namespace mc
     class VertexBuffer : public Bindable
     {
     public:
+        VertexBuffer(const VertexBuffer&) = delete;
+        VertexBuffer& operator=(const VertexBuffer&) = delete;
+
         VertexBuffer(const GraphicsManager& gm, void *vertices, unsigned int count, unsigned int stride);
         void Bind(const GraphicsManager& gm) override;
     private:

@@ -144,6 +144,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp" />
+    <ClCompile Include="GeometryGenerator.cpp" />
     <ClCompile Include="GraphicsManager.cpp" />
     <ClCompile Include="GraphicsResource.cpp" />
     <ClCompile Include="IndexBuffer.cpp" />
@@ -161,6 +162,7 @@
     <ClInclude Include="ConstBuffer.h" />
     <ClInclude Include="Drawable.h" />
     <ClInclude Include="Engine.h" />
+    <ClInclude Include="GeometryGenerator.h" />
     <ClInclude Include="GraphicsManager.h" />
     <ClInclude Include="GraphicsResource.h" />
     <ClInclude Include="IndexBuffer.h" />

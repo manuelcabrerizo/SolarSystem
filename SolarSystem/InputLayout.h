@@ -15,6 +15,9 @@ namespace mc
     class InputLayout : public Bindable
     {
     public:
+        InputLayout(const InputLayout&) = delete;
+        InputLayout& operator=(const InputLayout&) = delete;
+
         InputLayout(const GraphicsManager& gm, const VertexShader& shader, InputLayoutDesc& desc);
         void Bind(const GraphicsManager& gm) override;
     private:

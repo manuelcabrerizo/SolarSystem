@@ -8,6 +8,9 @@ namespace mc
     class VertexShader : public Bindable
     {
     public:
+        VertexShader(const VertexShader&) = delete;
+        VertexShader& operator=(const VertexShader&) = delete;
+
         VertexShader(const GraphicsManager& gm, const std::string& filepath);
         void Bind(const GraphicsManager& gm) override;
         ID3DBlob* GetByteCode() const { return shaderCompiled.Get(); }
