@@ -8,6 +8,7 @@
 #include "ConstBuffer.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
+#include "InputLayout.h"
 
 namespace mc
 {

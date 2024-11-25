@@ -16,6 +16,8 @@ namespace mc
             static_cast<float>(window.Width()),
             static_cast<float>(window.Height())
         );
+
+        deviceContext_->OMSetRenderTargets(1, renderTargetView_.GetAddressOf(), depthStencilView_.Get());
     }
 
     void GraphicsManager::Clear(float r, float g, float b) const
@@ -106,6 +108,13 @@ namespace mc
 
     void GraphicsManager::CreateDepthStencilView(const Window& window)
     {
+        // check for msaa
+        UINT msaaQuality4x;
+        device_->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 4, &msaaQuality4x);
+        if (msaaQuality4x <= 0)
+        {
+            throw std::runtime_error("Error msaa 4x not supported.");
+        }
         // create the depth stencil texture
         Microsoft::WRL::ComPtr<ID3D11Texture2D> depthStencilTexture;
         D3D11_TEXTURE2D_DESC depthStencilTextureDesc;
@@ -115,7 +124,7 @@ namespace mc
         depthStencilTextureDesc.ArraySize = 1;
         depthStencilTextureDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
         depthStencilTextureDesc.SampleDesc.Count = 4;
-        depthStencilTextureDesc.SampleDesc.Quality = 3; // TODO: test if this is correct
+        depthStencilTextureDesc.SampleDesc.Quality = msaaQuality4x - 1; // TODO: test if this is correct
         depthStencilTextureDesc.Usage = D3D11_USAGE_DEFAULT;
         depthStencilTextureDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
         depthStencilTextureDesc.CPUAccessFlags = 0;
