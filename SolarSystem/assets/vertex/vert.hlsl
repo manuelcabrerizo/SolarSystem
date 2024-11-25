@@ -19,11 +19,11 @@ struct PS_Input {
 PS_Input vs_main(VS_Input i) {
     PS_Input o = (PS_Input)0;
     
-    float4 wPos =  mul(float4(i.pos, 1.0f), model);
-    wPos = mul(wPos, view);
-    wPos = mul(wPos, proj);
+    float4 wPos = mul(model, float4(i.pos, 1.0f));
+    wPos = mul(view, wPos);
+    wPos = mul(proj, wPos);
     
-    float3 wNor = mul(i.nor, (float3x3) model);
+    float3 wNor = mul((float3x3) model, i.nor);
     wNor = normalize(wNor);
     
     o.pos = wPos;

@@ -20,10 +20,12 @@ namespace mc
         deviceContext_->OMSetRenderTargets(1, renderTargetView_.GetAddressOf(), depthStencilView_.Get());
     }
 
+
     void GraphicsManager::Clear(float r, float g, float b) const
     {
         float clearColor[] = { r, g, b, 1.0f };
         deviceContext_->ClearRenderTargetView(renderTargetView_.Get(), clearColor);
+        deviceContext_->ClearDepthStencilView(depthStencilView_.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
     }
 
     void GraphicsManager::Present() const

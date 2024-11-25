@@ -79,9 +79,9 @@ void Demo()
 
     // Init a Const Buffer
     PerFrameConstBuffer perFrameConstBuffer{};
-    perFrameConstBuffer.view = XMMatrixIdentity();// XMMatrixLookAtLH(XMLoadFloat3(&position), XMLoadFloat3(&target), XMLoadFloat3(&up));
     perFrameConstBuffer.model = XMMatrixIdentity();
-    perFrameConstBuffer.proj = XMMatrixIdentity();// XMMatrixPerspectiveFovLH((60.0f / 180.0f) * XM_PI, 800.0f / 600.0f, 1.0f, 100.0f);
+    perFrameConstBuffer.view  =  XMMatrixLookAtLH(XMLoadFloat3(&position), XMLoadFloat3(&target), XMLoadFloat3(&up));
+    perFrameConstBuffer.proj  = XMMatrixPerspectiveFovLH((60.0f / 180.0f) * XM_PI, 800.0f / 600.0f, 1.0f, 100.0f);
     mc::ConstBuffer<PerFrameConstBuffer> constBuffer(gm, mc::ConstBufferBind::Vertex, perFrameConstBuffer, 0);
     
     // Create a quad
