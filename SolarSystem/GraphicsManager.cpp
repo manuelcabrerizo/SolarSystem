@@ -70,7 +70,11 @@ namespace mc
     void GraphicsManager::CreateDevice()
     {
         // Create the device and deviceContext
-        int deviceFlags = D3D11_CREATE_DEVICE_DEBUG;
+        int deviceFlags = 0;
+#ifdef _DEBUG
+        deviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
+
         D3D_FEATURE_LEVEL featureLevel;
         if (FAILED(D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, deviceFlags, 0, 0, D3D11_SDK_VERSION, &device_, &featureLevel, &deviceContext_)))
         {

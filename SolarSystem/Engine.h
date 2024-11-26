@@ -10,6 +10,7 @@
 #include "IndexBuffer.h"
 #include "InputLayout.h"
 #include "FrameBuffer.h"
+#include "Texture.h"
 
 namespace mc
 {

@@ -75,6 +75,9 @@ void Demo()
     mc::PixelShader   pixelShader(gm, "assets/pixel/pixel.hlsl");
     mc::PixelShader texturePixelShader(gm, "assets/pixel/texturePixel.hlsl");
 
+    // Load textures
+    mc::Texture lavaTexture(gm, "assets/textures/Lava.png");
+
     // Init a Const Buffer
     PerFrameConstBuffer perFrameConstBuffer{};
     perFrameConstBuffer.model = XMMatrixIdentity();
@@ -127,7 +130,9 @@ void Demo()
 
         // draw to frame buffer
         {
-            perFrameConstBuffer.model = XMMatrixIdentity();
+            texturePixelShader.Bind(gm);
+
+            perFrameConstBuffer.model = XMMatrixScaling(4.0f, 4.0f, 4.0f);
             perFrameConstBuffer.view = XMMatrixLookAtLH(XMLoadFloat3(&position), XMLoadFloat3(&target), XMLoadFloat3(&up));
             perFrameConstBuffer.proj = XMMatrixPerspectiveFovLH((60.0f / 180.0f) * XM_PI, (float)windowWidth / (float)windowHeight, 1.0f, 100.0f);
             constBuffer.Update(gm, perFrameConstBuffer);
@@ -135,12 +140,15 @@ void Demo()
             frameBuffer.Bind(gm);
             frameBuffer.Clear(gm, 0.1f, 0.1f, 0.3f);
 
-            pixelShader.Bind(gm);
+            lavaTexture.Bind(gm, 0);
             sphere.Draw(gm, sphereData.indices.size(), true);
+            lavaTexture.Unbind(gm, 0);
         }
 
         // draw to backBuffer
         {
+            texturePixelShader.Bind(gm);
+
             perFrameConstBuffer.model = XMMatrixScaling(static_cast<float>(windowWidth), static_cast<float>(windowHeight), 1.0f);
             perFrameConstBuffer.view = XMMatrixIdentity();
             perFrameConstBuffer.proj = XMMatrixOrthographicLH(windowWidth, windowHeight, 0, 100);
@@ -149,7 +157,7 @@ void Demo()
             gm.BindBackBuffer();
             gm.Clear(0.3f, 0.1f, 0.1f);
 
-            texturePixelShader.Bind(gm);
+            
 
             frameBuffer.BindAsTexture(gm, 0);
             quad.Draw(gm, quadData.vertices.size(), false);

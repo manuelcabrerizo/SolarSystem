@@ -41,7 +41,7 @@ namespace mc
 
     void FrameBuffer::CreateTexture(const GraphicsManager& gm)
     {
-        D3D11_TEXTURE2D_DESC texDesc;
+        D3D11_TEXTURE2D_DESC texDesc{};
         texDesc.Width = w_;
         texDesc.Height = h_;
         texDesc.MipLevels = 1;
@@ -61,7 +61,7 @@ namespace mc
 
     void FrameBuffer::CreateRenderTargetView(const GraphicsManager& gm)
     {
-        D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
+        D3D11_RENDER_TARGET_VIEW_DESC rtvDesc{};
         rtvDesc.Format = format_;
         rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
         rtvDesc.Texture2D.MipSlice = 0;
@@ -73,7 +73,7 @@ namespace mc
 
     void FrameBuffer::CreateShaderResourceView(const GraphicsManager& gm)
     {
-        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
         srvDesc.Format = format_;
         srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         srvDesc.Texture2D.MipLevels = 1;
@@ -88,7 +88,7 @@ namespace mc
     {
         // create the depth stencil texture
         Microsoft::WRL::ComPtr<ID3D11Texture2D> depthStencilTexture;
-        D3D11_TEXTURE2D_DESC depthStencilTextureDesc;
+        D3D11_TEXTURE2D_DESC depthStencilTextureDesc{};
         depthStencilTextureDesc.Width = w_;
         depthStencilTextureDesc.Height = h_;
         depthStencilTextureDesc.MipLevels = 1;
@@ -105,7 +105,7 @@ namespace mc
             throw std::runtime_error("Error creating frame buffer depth stencil texture");
         }
         // create the depth stencil view
-        D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
+        D3D11_DEPTH_STENCIL_VIEW_DESC descDSV{};
         descDSV.Flags = 0;
         descDSV.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
         descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
