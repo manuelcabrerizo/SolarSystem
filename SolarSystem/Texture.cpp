@@ -8,7 +8,7 @@ namespace mc
 {
     Texture::Texture(const GraphicsManager& gm, const std::string& filepath)
     {
-        stbi_set_flip_vertically_on_load(false);
+        stbi_set_flip_vertically_on_load(true);
         int channels = 4;
         void* data = (void*)stbi_load(filepath.c_str(), &width_, &height_, &channels, 0);
         if (!data)

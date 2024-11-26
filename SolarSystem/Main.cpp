@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cmath>
 
 #include <DirectXMath.h>
 #include "Engine.h"
@@ -66,23 +67,24 @@ void Demo()
     mc::InputManager& im = engine.GetInputManager();
 
     // Camera Variables
-    XMFLOAT3 position(0.0f, 0.0f, -10.0f);
+    XMFLOAT3 position(0.0f, 0.0f, 20.0f);
     XMFLOAT3 target(0.0f, 0.0f, 0.0f);
     XMFLOAT3 up(0.0f, 1.0f, 0.0f);
 
     // Init Shaders
     mc::VertexShader vertexShader(gm, "assets/vertex/vert.hlsl");
-    mc::PixelShader   pixelShader(gm, "assets/pixel/pixel.hlsl");
+    mc::PixelShader postProcessShader(gm, "assets/pixel/postProcess.hlsl");
     mc::PixelShader texturePixelShader(gm, "assets/pixel/texturePixel.hlsl");
 
     // Load textures
     mc::Texture lavaTexture(gm, "assets/textures/Lava.png");
+    mc::Texture skyTexture(gm, "assets/textures/sky.png");
 
     // Init a Const Buffer
     PerFrameConstBuffer perFrameConstBuffer{};
     perFrameConstBuffer.model = XMMatrixIdentity();
     perFrameConstBuffer.view = XMMatrixLookAtLH(XMLoadFloat3(&position), XMLoadFloat3(&target), XMLoadFloat3(&up));
-    perFrameConstBuffer.proj = XMMatrixPerspectiveFovLH((60.0f / 180.0f) * XM_PI, (float)windowWidth / (float)windowHeight, 1.0f, 100.0f);
+    perFrameConstBuffer.proj = XMMatrixPerspectiveFovLH((90.0f / 180.0f) * XM_PI, (float)windowWidth / (float)windowHeight, 1.0f, 100.0f);
     mc::ConstBuffer<PerFrameConstBuffer> constBuffer(gm, mc::ConstBufferBind::Vertex, perFrameConstBuffer, 0);
         
     // create the input layout
@@ -116,8 +118,15 @@ void Demo()
     vertexShader.Bind(gm);
     constBuffer.Bind(gm);
 
+
+    float time = 0;
+
     while (engine.IsRunning())
     {
+
+        position = XMFLOAT3(20 * std::cosf(time), 0.0f, 20 * -std::sinf(time));
+        time += 0.01f;
+
         if (im.KeyJustDown(mc::KEY_A))
         {
             std::cout << "A just down\n";
@@ -132,22 +141,49 @@ void Demo()
         {
             texturePixelShader.Bind(gm);
 
-            perFrameConstBuffer.model = XMMatrixScaling(4.0f, 4.0f, 4.0f);
+            perFrameConstBuffer.model = XMMatrixScaling(1.0f, 1.0f, 1.0f);
             perFrameConstBuffer.view = XMMatrixLookAtLH(XMLoadFloat3(&position), XMLoadFloat3(&target), XMLoadFloat3(&up));
-            perFrameConstBuffer.proj = XMMatrixPerspectiveFovLH((60.0f / 180.0f) * XM_PI, (float)windowWidth / (float)windowHeight, 1.0f, 100.0f);
+            perFrameConstBuffer.proj = XMMatrixPerspectiveFovLH((90.0f / 180.0f) * XM_PI, (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
             constBuffer.Update(gm, perFrameConstBuffer);
 
             frameBuffer.Bind(gm);
             frameBuffer.Clear(gm, 0.1f, 0.1f, 0.3f);
 
+            // Draw sky
+            gm.SetRasterizerStateCullFront();
+            gm.SetDepthStencilOff();
+            perFrameConstBuffer.model = XMMatrixTranslation(position.x, position.y, position.z);
+            constBuffer.Update(gm, perFrameConstBuffer);
+            skyTexture.Bind(gm, 0);
+            sphere.Draw(gm, sphereData.indices.size(), true);
+            skyTexture.Unbind(gm, 0);
+
+
+            // Draw planet
+            gm.SetRasterizerStateCullBack();
+            gm.SetDepthStencilOn();
+            perFrameConstBuffer.model = XMMatrixScaling(4.0f, 4.0f, 4.0f) * XMMatrixTranslation(0, 0, 0);
+            constBuffer.Update(gm, perFrameConstBuffer);
             lavaTexture.Bind(gm, 0);
             sphere.Draw(gm, sphereData.indices.size(), true);
             lavaTexture.Unbind(gm, 0);
+
+
+            // Draw planet
+            perFrameConstBuffer.model = XMMatrixScaling(1.0f, 1.0f, 1.0f) * XMMatrixTranslation(5.0f, 0.0f, 0.0f);
+            constBuffer.Update(gm, perFrameConstBuffer);
+            lavaTexture.Bind(gm, 0);
+            sphere.Draw(gm, sphereData.indices.size(), true);
+            lavaTexture.Unbind(gm, 0);
+
+
         }
 
         // draw to backBuffer
         {
-            texturePixelShader.Bind(gm);
+            gm.SetRasterizerStateCullBack();
+
+            postProcessShader.Bind(gm);
 
             perFrameConstBuffer.model = XMMatrixScaling(static_cast<float>(windowWidth), static_cast<float>(windowHeight), 1.0f);
             perFrameConstBuffer.view = XMMatrixIdentity();
