@@ -10,7 +10,7 @@ namespace mc
     class Drawable : public GraphicsResource
     {
     public:
-        virtual void Draw(const mc::GraphicsManager& gm, unsigned int count) = 0;
+        virtual void Draw(const mc::GraphicsManager& gm, unsigned int count, bool indexed) = 0;
         virtual ~Drawable() = default;
     protected:
         std::vector<Bindable *> bindables_;

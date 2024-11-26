@@ -37,14 +37,22 @@ public:
         }
     }
 
-    void Draw(const mc::GraphicsManager& gm, unsigned int count) override
+    void Draw(const mc::GraphicsManager& gm, unsigned int count, bool indexed) override
     {
         for (mc::Bindable* bindable : bindables_)
         {
             bindable->Bind(gm);
         }
         GetDeviceContext(gm)->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        GetDeviceContext(gm)->DrawIndexed(count, 0, 0);
+        if (indexed)
+        {
+            GetDeviceContext(gm)->DrawIndexed(count, 0, 0);
+        }
+        else
+        {
+            GetDeviceContext(gm)->Draw(count, 0);
+        }
+        
     }
 };
 
@@ -65,20 +73,15 @@ void Demo()
     // Init Shaders
     mc::VertexShader vertexShader(gm, "assets/vertex/vert.hlsl");
     mc::PixelShader   pixelShader(gm, "assets/pixel/pixel.hlsl");
+    mc::PixelShader texturePixelShader(gm, "assets/pixel/texturePixel.hlsl");
 
     // Init a Const Buffer
     PerFrameConstBuffer perFrameConstBuffer{};
     perFrameConstBuffer.model = XMMatrixIdentity();
-    perFrameConstBuffer.view  =  XMMatrixLookAtLH(XMLoadFloat3(&position), XMLoadFloat3(&target), XMLoadFloat3(&up));
-    perFrameConstBuffer.proj  = XMMatrixPerspectiveFovLH((60.0f / 180.0f) * XM_PI, (float)windowWidth / (float)windowHeight, 1.0f, 100.0f);
+    perFrameConstBuffer.view = XMMatrixLookAtLH(XMLoadFloat3(&position), XMLoadFloat3(&target), XMLoadFloat3(&up));
+    perFrameConstBuffer.proj = XMMatrixPerspectiveFovLH((60.0f / 180.0f) * XM_PI, (float)windowWidth / (float)windowHeight, 1.0f, 100.0f);
     mc::ConstBuffer<PerFrameConstBuffer> constBuffer(gm, mc::ConstBufferBind::Vertex, perFrameConstBuffer, 0);
-    
-    mc::MeshData sphereData;
-    mc::GeometryGenerator::GenerateSphere(1, 3, sphereData);
-
-    mc::VertexBuffer sphereVB(gm, sphereData.vertices.data(), sphereData.vertices.size(), sizeof(mc::Vertex));
-    mc::IndexBuffer  sphereIB(gm, sphereData.indices.data(), sphereData.indices.size());
-    
+        
     // create the input layout
     mc::InputLayoutDesc desc = {
         {
@@ -89,13 +92,25 @@ void Demo()
         },
         4
     };
-    mc::InputLayout sphereIL(gm, vertexShader, desc);
+    mc::InputLayout IL(gm, vertexShader, desc);
 
+    // Create a sphere
+    mc::MeshData sphereData;
+    mc::GeometryGenerator::GenerateSphere(1, 3, sphereData);
+    mc::VertexBuffer sphereVB(gm, sphereData.vertices.data(), sphereData.vertices.size(), sizeof(mc::Vertex));
+    mc::IndexBuffer  sphereIB(gm, sphereData.indices.data(), sphereData.indices.size());
+    Mesh sphere(gm, &sphereVB, &IL, &sphereIB);
+    
     // Create a quad
-    Mesh mesh(gm, &sphereVB, &sphereIL, &sphereIB);
+    mc::MeshData quadData;
+    mc::GeometryGenerator::GenerateQuad(quadData);
+    mc::VertexBuffer quadVB(gm, quadData.vertices.data(), quadData.vertices.size(), sizeof(mc::Vertex));
+    Mesh quad(gm, &quadVB, &IL);
+
+    mc::FrameBuffer frameBuffer(gm, 0, 0, windowWidth, windowHeight);
+
 
     vertexShader.Bind(gm);
-    pixelShader.Bind(gm);
     constBuffer.Bind(gm);
 
     while (engine.IsRunning())
@@ -110,9 +125,36 @@ void Demo()
             std::cout << "A just up\n";
         }
 
-        gm.Clear(0.1f, 0.1f, 0.3f);
+        // draw to frame buffer
+        {
+            perFrameConstBuffer.model = XMMatrixIdentity();
+            perFrameConstBuffer.view = XMMatrixLookAtLH(XMLoadFloat3(&position), XMLoadFloat3(&target), XMLoadFloat3(&up));
+            perFrameConstBuffer.proj = XMMatrixPerspectiveFovLH((60.0f / 180.0f) * XM_PI, (float)windowWidth / (float)windowHeight, 1.0f, 100.0f);
+            constBuffer.Update(gm, perFrameConstBuffer);
 
-        mesh.Draw(gm, sphereData.indices.size());
+            frameBuffer.Bind(gm);
+            frameBuffer.Clear(gm, 0.1f, 0.1f, 0.3f);
+
+            pixelShader.Bind(gm);
+            sphere.Draw(gm, sphereData.indices.size(), true);
+        }
+
+        // draw to backBuffer
+        {
+            perFrameConstBuffer.model = XMMatrixScaling(static_cast<float>(windowWidth), static_cast<float>(windowHeight), 1.0f);
+            perFrameConstBuffer.view = XMMatrixIdentity();
+            perFrameConstBuffer.proj = XMMatrixOrthographicLH(windowWidth, windowHeight, 0, 100);
+            constBuffer.Update(gm, perFrameConstBuffer);
+
+            gm.BindBackBuffer();
+            gm.Clear(0.3f, 0.1f, 0.1f);
+
+            texturePixelShader.Bind(gm);
+
+            frameBuffer.BindAsTexture(gm, 0);
+            quad.Draw(gm, quadData.vertices.size(), false);
+            frameBuffer.UnbindAsTexture(gm, 0);
+        }
 
         gm.Present();
     }

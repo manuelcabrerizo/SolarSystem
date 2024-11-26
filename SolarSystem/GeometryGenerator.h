@@ -24,6 +24,7 @@ namespace mc
     class GeometryGenerator
     {
     public:
+        static void GenerateQuad(MeshData& meshData);
         static void GenerateSphere(float radius, unsigned int numSubdivisions, MeshData& meshData);
 
     private:

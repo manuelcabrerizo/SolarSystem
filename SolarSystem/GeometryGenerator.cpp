@@ -3,6 +3,20 @@
 namespace mc
 {
 // PUBLICS:
+    void GeometryGenerator::GenerateQuad(MeshData& meshData)
+    {
+        Vertex vertices[6] = {
+            {{-0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+            {{-0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
+            {{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
+            {{-0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+            {{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
+            {{ 0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}}
+        };
+        meshData.vertices.resize(6);
+        memcpy(meshData.vertices.data(), vertices, sizeof(Vertex) * 6);
+    }
+
     void GeometryGenerator::GenerateSphere(float radius, unsigned int numSubdivisions, MeshData& meshData)
     {
         // Approximate the sphere by tessellating an icosahedron

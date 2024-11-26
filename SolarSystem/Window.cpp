@@ -17,7 +17,7 @@ namespace mc
 
         WNDCLASSEX wndClass{};
         wndClass.cbSize = sizeof(WNDCLASSEX);
-        wndClass.style = CS_HREDRAW | CS_VREDRAW;
+        wndClass.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
         wndClass.lpfnWndProc = Wndproc;
         wndClass.cbClsExtra = 0;
         wndClass.cbWndExtra = sizeof(std::size_t);

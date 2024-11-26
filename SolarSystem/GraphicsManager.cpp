@@ -6,18 +6,23 @@
 
 namespace mc
 {
-    GraphicsManager::GraphicsManager(const Window& window) {
+    GraphicsManager::GraphicsManager(const Window& window) 
+        : w_(window.Width()), h_(window.Height())
+    {
 
         CreateDevice();
         CreateSwapChain(window);
         CreateRenderTargetView();
         CreateDepthStencilView(window);
+        CreateSamplerStates();
+
         SetViewport(
+            0.0f, 0.0f,
             static_cast<float>(window.Width()),
             static_cast<float>(window.Height())
         );
-
-        deviceContext_->OMSetRenderTargets(1, renderTargetView_.GetAddressOf(), depthStencilView_.Get());
+        BindBackBuffer();
+        SetSamplerLinear();
     }
 
 
@@ -33,17 +38,33 @@ namespace mc
         swapChain_->Present(1, 0);
     }
 
-    void  GraphicsManager::SetViewport(float width, float height)
+    void  GraphicsManager::SetViewport(float x, float y, float width, float height) const
     {
         // set up the viewport
         D3D11_VIEWPORT viewport;
-        viewport.TopLeftX = 0.0f;
-        viewport.TopLeftY = 0.0f;
+        viewport.TopLeftX = x;
+        viewport.TopLeftY = y;
         viewport.Width = width;
         viewport.Height = height;
         viewport.MinDepth = 0.0f;
         viewport.MaxDepth = 1.0f;
         deviceContext_->RSSetViewports(1, &viewport);
+    }
+
+    void GraphicsManager::BindBackBuffer()
+    {
+        deviceContext_->OMSetRenderTargets(1, renderTargetView_.GetAddressOf(), depthStencilView_.Get());
+        SetViewport(0.0f, 0.0f, static_cast<float>(w_), static_cast<float>(h_));
+    }
+
+    void GraphicsManager::SetSamplerLinear()
+    {
+        deviceContext_->PSSetSamplers(0, 1, samplerStateLinear_.GetAddressOf());
+    }
+
+    void GraphicsManager::SetSamplerPoint()
+    {
+        deviceContext_->PSSetSamplers(0, 1, samplerStatePoint_.GetAddressOf());
     }
 
     void GraphicsManager::CreateDevice()
@@ -138,6 +159,27 @@ namespace mc
         if (FAILED(device_->CreateDepthStencilView(depthStencilTexture.Get(), 0, &depthStencilView_)))
         {
             throw std::runtime_error("Error creating depth stencil view.");
+        }
+    }
+
+    void GraphicsManager::CreateSamplerStates()
+    {
+        // D3D11_TEXTURE_ADDRESS_CLAMP; D3D11_TEXTURE_ADDRESS_WRAP;
+        D3D11_SAMPLER_DESC colorMapDesc{};
+        colorMapDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+        colorMapDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+        colorMapDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+        colorMapDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+        colorMapDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+        colorMapDesc.MaxLOD = D3D11_FLOAT32_MAX;
+        if (FAILED(device_->CreateSamplerState(&colorMapDesc, &samplerStatePoint_)))
+        {
+            throw std::runtime_error("Error: Failed Creating sampler state Point\n");
+        }
+        colorMapDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        if (FAILED(device_->CreateSamplerState(&colorMapDesc, &samplerStateLinear_)))
+        {
+            throw std::runtime_error("Error: Failed Creating sampler state Linear\n");
         }
     }
 }
