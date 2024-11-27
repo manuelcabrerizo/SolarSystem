@@ -3,12 +3,11 @@
 #include "VertexShader.h"
 #include "PixelShader.h"
 
-#include <vector>
+#include <unordered_map>
 #include <string>
 
 namespace mc
 {
-    using Shader = unsigned int;
     class ShaderManager
     {
     public:
@@ -17,18 +16,14 @@ namespace mc
         ShaderManager(const ShaderManager&) = delete;
         ShaderManager& operator=(const ShaderManager&) = delete;
 
-        Shader AddVertexShader(const GraphicsManager& gm, const std::string& filepath);
-        Shader AddPixelShader(const GraphicsManager& gm, const std::string& filepath);
-
-        VertexShader& GetVertexShader(Shader shader);
-        PixelShader& GetPixelShader(Shader shader);
+        void AddVertexShader(const std::string& name, const GraphicsManager& gm, const std::string& filepath);
+        void AddPixelShader(const std::string& name, const GraphicsManager& gm, const std::string& filepath);
+        Shader *Get(const std::string& name);
 
         void HotReaload(const GraphicsManager& gm);
 
     private:
-        // TODO: unify this vector into one
-        std::vector<VertexShader> vertexShaders_;
-        std::vector<PixelShader> pixelShaders_;
+        std::unordered_map<std::string, std::unique_ptr<Shader>> shaders_;
     };
 }
 

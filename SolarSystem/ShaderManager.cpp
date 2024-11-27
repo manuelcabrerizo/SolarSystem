@@ -4,50 +4,32 @@ namespace mc
 {
     ShaderManager::ShaderManager() {}
 
-    Shader ShaderManager::AddVertexShader(const GraphicsManager& gm, const std::string& filepath)
+    void ShaderManager::AddVertexShader(const std::string& name, const GraphicsManager& gm, const std::string& filepath)
     {
-        vertexShaders_.emplace_back(gm, filepath);
-        return vertexShaders_.size() - 1;
+        shaders_.emplace(std::make_pair(name, std::make_unique<VertexShader>(gm, filepath)));
     }
 
-    Shader ShaderManager::AddPixelShader(const GraphicsManager& gm, const std::string& filepath)
+    void ShaderManager::AddPixelShader(const std::string& name, const GraphicsManager& gm, const std::string& filepath)
     {
-        pixelShaders_.emplace_back(gm, filepath);
-        return pixelShaders_.size() - 1;
-
-    }
-    
-
-    VertexShader& ShaderManager::GetVertexShader(Shader shader)
-    {
-        return vertexShaders_[shader];
+        shaders_.emplace(std::make_pair(name, std::make_unique<PixelShader>(gm, filepath)));
     }
 
-    PixelShader& ShaderManager::GetPixelShader(Shader shader)
+    Shader* ShaderManager::Get(const std::string& name)
     {
-        return pixelShaders_[shader];
-    }
-    
+        return shaders_.at(name).get();
+    }    
 
     void ShaderManager::HotReaload(const GraphicsManager& gm)
     {
-        for (auto& shader : vertexShaders_)
+        for (auto& pair : shaders_)
         {
-            auto p = std::filesystem::current_path() / shader.GetPath();
+            auto& shader = pair.second;
+            auto p = std::filesystem::current_path() / shader->GetPath();
             std::filesystem::file_time_type ftime = std::filesystem::last_write_time(p);
-            if (ftime != shader.GetLastWriteTime())
+            if (ftime != shader->GetLastWriteTime())
             {
-                shader.Compile(gm);
+                shader->Compile(gm);
             }
         }
-        for (auto& shader : pixelShaders_)
-        {
-            auto p = std::filesystem::current_path() / shader.GetPath();
-            std::filesystem::file_time_type ftime = std::filesystem::last_write_time(p);
-            if (ftime != shader.GetLastWriteTime())
-            {
-                shader.Compile(gm);
-            }
-        }       
     }
 }

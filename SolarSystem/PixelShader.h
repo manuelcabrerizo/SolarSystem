@@ -1,27 +1,18 @@
 #pragma once
 
-#include "GraphicsResource.h"
-#include <string>
-#include <filesystem>
+#include "Shader.h"
 
 namespace mc
 {
-    class PixelShader : public GraphicsResource
+    class PixelShader : public Shader
     {
     public:
         PixelShader& operator=(const PixelShader&) = delete;
-
         PixelShader(const GraphicsManager& gm, const std::string& filepath);
-        void Bind(const GraphicsManager& gm);
-        ID3DBlob* GetByteCode() const { return shaderCompiled.Get(); }
-        const std::string& GetPath() const { return filepath_; }
-        auto& GetLastWriteTime() const { return lastWriteTime_; }
-        void Compile(const GraphicsManager& gm);
+        void Bind(const GraphicsManager& gm) override;
+        void Compile(const GraphicsManager& gm) override;
     private:
-        Microsoft::WRL::ComPtr<ID3D11PixelShader> shader;
-        Microsoft::WRL::ComPtr<ID3DBlob> shaderCompiled;
-        std::filesystem::file_time_type lastWriteTime_;
-        std::string filepath_;
+        Microsoft::WRL::ComPtr<ID3D11PixelShader> shader_;
     };
 }
 

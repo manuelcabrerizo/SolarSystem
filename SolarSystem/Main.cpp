@@ -69,14 +69,10 @@ void Demo()
     XMFLOAT3 up(0.0f, 1.0f, 0.0f);
 
     // Init Shaders
-    mc::Shader vertexShaderHandle = sm.AddVertexShader(gm, "assets/vertex/vert.hlsl");
-    mc::Shader postProcessShaderHandle = sm.AddPixelShader(gm, "assets/pixel/postProcess.hlsl");
-    mc::Shader texturePixelShaderHandle = sm.AddPixelShader(gm, "assets/pixel/texturePixel.hlsl");
-    mc::Shader skyboxShaderHandle = sm.AddPixelShader(gm, "assets/pixel/skybox.hlsl");
-    mc::VertexShader& vertexShader = sm.GetVertexShader(vertexShaderHandle);
-    mc::PixelShader& postProcessShader = sm.GetPixelShader(postProcessShaderHandle);
-    mc::PixelShader& texturePixelShader = sm.GetPixelShader(texturePixelShaderHandle);
-    mc::PixelShader& skyboxShader = sm.GetPixelShader(skyboxShaderHandle);
+    sm.AddVertexShader("vert", gm, "assets/vertex/vert.hlsl");
+    sm.AddPixelShader("postProcess", gm, "assets/pixel/postProcess.hlsl");
+    sm.AddPixelShader("texturePixel", gm, "assets/pixel/texturePixel.hlsl");
+    sm.AddPixelShader("skybox", gm, "assets/pixel/skybox.hlsl");
 
     // Load textures
     mc::Texture lavaTexture(gm, "assets/textures/Lava.png");
@@ -100,7 +96,7 @@ void Demo()
         },
         4
     };
-    mc::InputLayout IL(gm, vertexShader, desc);
+    mc::InputLayout IL(gm, *(mc::VertexShader *)sm.Get("vert"), desc);
 
     // Create a sphere
     mc::MeshData sphereData;
@@ -117,7 +113,7 @@ void Demo()
 
     mc::FrameBuffer frameBuffer(gm, 0, 0, windowWidth, windowHeight);
 
-    vertexShader.Bind(gm);
+    sm.Get("vert")->Bind(gm);
     constBuffer.Bind(gm);
 
 
@@ -152,7 +148,7 @@ void Demo()
             frameBuffer.Clear(gm, 0.1f, 0.1f, 0.3f);
 
             // Draw sky
-            skyboxShader.Bind(gm);
+            sm.Get("skybox")->Bind(gm);
             gm.SetRasterizerStateCullFront();
             gm.SetDepthStencilOff();
             perFrameConstBuffer.model = XMMatrixTranslation(position.x, position.y, position.z);
@@ -164,8 +160,7 @@ void Demo()
 
             gm.SetRasterizerStateCullBack();
             gm.SetDepthStencilOn();
-            texturePixelShader.Bind(gm);
-
+            sm.Get("texturePixel")->Bind(gm);
             // Draw planet
             perFrameConstBuffer.model = XMMatrixScaling(4.0f, 4.0f, 4.0f) * XMMatrixTranslation(0, 0, 0);
             constBuffer.Update(gm, perFrameConstBuffer);
@@ -185,8 +180,7 @@ void Demo()
         {
             gm.SetRasterizerStateCullBack();
 
-            postProcessShader.Bind(gm);
-
+            sm.Get("postProcess")->Bind(gm);
             perFrameConstBuffer.model = XMMatrixScaling(static_cast<float>(windowWidth), static_cast<float>(windowHeight), 1.0f);
             perFrameConstBuffer.view = XMMatrixIdentity();
             perFrameConstBuffer.proj = XMMatrixOrthographicLH(windowWidth, windowHeight, 0, 100);

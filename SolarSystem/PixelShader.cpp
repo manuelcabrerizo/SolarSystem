@@ -9,8 +9,8 @@
 namespace mc
 {
     PixelShader::PixelShader(const GraphicsManager& gm, const std::string& filepath)
-        : filepath_(filepath)
     {
+        filepath_ = filepath;
         Compile(gm);
     }
 
@@ -23,19 +23,19 @@ namespace mc
         D3DCompile(shaderFile.data, shaderFile.size,
             0, 0, 0, "fs_main", "ps_5_0",
             D3DCOMPILE_ENABLE_STRICTNESS, 0,
-            &shaderCompiled, &errorShader);
+            &shaderCompiled_, &errorShader);
         if (errorShader != 0)
         {
             char* errorString = (char*)errorShader->GetBufferPointer();
-            std::cout << "Error conpiling PIXEL SHADER: " << filepath_ << "\n";
+            std::cout << "Error compiling PIXEL SHADER: " << filepath_ << "\n";
             std::cout << errorString << "\n";
         }
         else
         {
             GetDevice(gm)->CreatePixelShader(
-                shaderCompiled->GetBufferPointer(),
-                shaderCompiled->GetBufferSize(), 0,
-                &shader);
+                shaderCompiled_->GetBufferPointer(),
+                shaderCompiled_->GetBufferSize(), 0,
+                &shader_);
         }
 
         // save the write time
@@ -45,6 +45,6 @@ namespace mc
 
     void PixelShader::Bind(const GraphicsManager& gm)
     {
-        GetDeviceContext(gm)->PSSetShader(shader.Get(), 0, 0);
+        GetDeviceContext(gm)->PSSetShader(shader_.Get(), 0, 0);
     }
 }

@@ -175,6 +175,7 @@
     <ClInclude Include="InputLayout.h" />
     <ClInclude Include="InputManager.h" />
     <ClInclude Include="PixelShader.h" />
+    <ClInclude Include="Shader.h" />
     <ClInclude Include="ShaderManager.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="Utils.h" />

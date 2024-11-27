@@ -11,8 +11,7 @@ struct PS_Input
 float4 fs_main(PS_Input i) : SV_TARGET
 {
     float2 testUv = i.uv;
-    testUv *= 1.0f;
+    testUv.x *= 5.0f;
     float4 textureColor = srv.Sample(samplerState, testUv);
-    
     return textureColor;
 }
