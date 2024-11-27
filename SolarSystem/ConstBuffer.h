@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Bindable.h"
+#include "GraphicsResource.h"
 #include <stdexcept>
 
 namespace mc
@@ -12,7 +12,7 @@ namespace mc
     };
 
     template<typename Type>
-    class ConstBuffer : public Bindable
+    class ConstBuffer : public GraphicsResource
     {
     public:
         ConstBuffer(const ConstBuffer&) = delete;
@@ -48,7 +48,7 @@ namespace mc
             GetDeviceContext(gm)->Unmap(buffer.Get(), 0);
         }
         
-        void Bind(const GraphicsManager& gm) override
+        void Bind(const GraphicsManager& gm)
         {
             switch (bindTo)
             {

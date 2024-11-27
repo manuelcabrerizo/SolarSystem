@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Bindable.h"
+#include "GraphicsResource.h"
 
 namespace mc
 {
@@ -12,14 +12,14 @@ namespace mc
 
     class VertexShader;
 
-    class InputLayout : public Bindable
+    class InputLayout : public GraphicsResource
     {
     public:
         InputLayout(const InputLayout&) = delete;
         InputLayout& operator=(const InputLayout&) = delete;
 
         InputLayout(const GraphicsManager& gm, const VertexShader& shader, InputLayoutDesc& desc);
-        void Bind(const GraphicsManager& gm) override;
+        void Bind(const GraphicsManager& gm);
     private:
         Microsoft::WRL::ComPtr <ID3D11InputLayout> layout;
     };

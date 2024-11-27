@@ -10,6 +10,8 @@ namespace mc
     public:
         InputManager();
         ~InputManager();
+        InputManager(const InputManager&) = delete;
+        InputManager& operator=(const InputManager&) = delete;
 
         bool KeyDown(unsigned int key) const;
         bool KeyJustDown(unsigned int key) const;

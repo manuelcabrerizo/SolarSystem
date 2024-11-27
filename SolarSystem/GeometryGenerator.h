@@ -25,7 +25,8 @@ namespace mc
     {
     public:
         static void GenerateQuad(MeshData& meshData);
-        static void GenerateSphere(float radius, unsigned int numSubdivisions, MeshData& meshData);
+        static void GenerateSphere(float radius, unsigned int sliceCount, unsigned int stackCount, MeshData& meshData);
+        static void GenerateGeosphere(float radius, unsigned int numSubdivisions, MeshData& meshData);
 
     private:
         static void Subdivide(MeshData& meshData);

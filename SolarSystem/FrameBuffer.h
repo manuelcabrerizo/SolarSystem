@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Bindable.h"
+#include "GraphicsResource.h"
 
 namespace mc
 {
-    class FrameBuffer : public Bindable
+    class FrameBuffer : public GraphicsResource
     {
     public:
         FrameBuffer(const FrameBuffer&) = delete;
@@ -13,7 +13,7 @@ namespace mc
         FrameBuffer(const GraphicsManager& gm, 
             unsigned int x, unsigned int y,
             unsigned int w, unsigned int h);
-        void Bind(const GraphicsManager& gm) override;
+        void Bind(const GraphicsManager& gm);
         void Clear(const GraphicsManager& gm, float r, float g, float b);
         void BindAsTexture(const GraphicsManager& gm, unsigned int slot);
         void UnbindAsTexture(const GraphicsManager& gm, unsigned int slot);

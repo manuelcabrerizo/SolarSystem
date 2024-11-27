@@ -30,5 +30,10 @@ namespace mc
         return inputManager_;
     }
 
+    ShaderManager& Engine::GetShaderManager()
+    {
+        return shaderManager_;
+    }
+
 
 }

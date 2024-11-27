@@ -2,15 +2,16 @@
 
 #include "GraphicsManager.h"
 #include "InputManager.h"
+#include "ShaderManager.h"
 
-#include "VertexShader.h"
-#include "PixelShader.h"
 #include "ConstBuffer.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
 #include "InputLayout.h"
 #include "FrameBuffer.h"
 #include "Texture.h"
+
+#include "GeometryGenerator.h"
 
 namespace mc
 {
@@ -22,11 +23,13 @@ namespace mc
         bool IsRunning();
         GraphicsManager& GetGraphicsManager();
         InputManager& GetInputManager();
+        ShaderManager& GetShaderManager();
         static bool isRunning;
     private:
         InputManager inputManager_;
         Window window_;
         GraphicsManager graphicsManager_;
+        ShaderManager shaderManager_;
     };
 }
 

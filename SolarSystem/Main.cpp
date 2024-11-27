@@ -3,9 +3,6 @@
 
 #include <DirectXMath.h>
 #include "Engine.h"
-#include "Drawable.h"
-
-#include "GeometryGenerator.h"
 
 using namespace DirectX;
 
@@ -16,34 +13,30 @@ struct PerFrameConstBuffer
     XMMATRIX proj;
 };
 
-class Mesh : public mc::Drawable
+class Mesh : public mc::GraphicsResource
 {
 public:
     Mesh(const mc::GraphicsManager& gm,
         mc::VertexBuffer* vb = nullptr,
         mc::InputLayout* il = nullptr,
         mc::IndexBuffer* ib = nullptr)
-    {
-        if (vb != nullptr)
-        {
-            bindables_.push_back(vb);
-        }
-        if (il != nullptr)
-        {
-            bindables_.push_back(il);
-        }
-        if (ib != nullptr)
-        {
-            bindables_.push_back(ib);
-        }
-    }
+        : vb_(vb), il_(il), ib_(ib) { }
 
-    void Draw(const mc::GraphicsManager& gm, unsigned int count, bool indexed) override
+    void Draw(const mc::GraphicsManager& gm, unsigned int count, bool indexed)
     {
-        for (mc::Bindable* bindable : bindables_)
+        if (vb_)
         {
-            bindable->Bind(gm);
+            vb_->Bind(gm);
         }
+        if (il_)
+        {
+            il_->Bind(gm);
+        }
+        if (ib_)
+        {
+            ib_->Bind(gm);
+        }
+
         GetDeviceContext(gm)->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         if (indexed)
         {
@@ -53,18 +46,22 @@ public:
         {
             GetDeviceContext(gm)->Draw(count, 0);
         }
-        
     }
+private:
+    mc::VertexBuffer* vb_{ nullptr };
+    mc::InputLayout* il_{ nullptr };
+    mc::IndexBuffer* ib_{ nullptr };
 };
 
 void Demo()
 {
-    constexpr int windowWidth = 1280;
-    constexpr int windowHeight = 720;
+    constexpr int windowWidth = 800;
+    constexpr int windowHeight = 600;
 
     mc::Engine engine{ "SolarSystem", windowWidth, windowHeight };
     mc::GraphicsManager& gm = engine.GetGraphicsManager();
     mc::InputManager& im = engine.GetInputManager();
+    mc::ShaderManager& sm = engine.GetShaderManager();
 
     // Camera Variables
     XMFLOAT3 position(0.0f, 0.0f, 20.0f);
@@ -72,19 +69,25 @@ void Demo()
     XMFLOAT3 up(0.0f, 1.0f, 0.0f);
 
     // Init Shaders
-    mc::VertexShader vertexShader(gm, "assets/vertex/vert.hlsl");
-    mc::PixelShader postProcessShader(gm, "assets/pixel/postProcess.hlsl");
-    mc::PixelShader texturePixelShader(gm, "assets/pixel/texturePixel.hlsl");
+    mc::Shader vertexShaderHandle = sm.AddVertexShader(gm, "assets/vertex/vert.hlsl");
+    mc::Shader postProcessShaderHandle = sm.AddPixelShader(gm, "assets/pixel/postProcess.hlsl");
+    mc::Shader texturePixelShaderHandle = sm.AddPixelShader(gm, "assets/pixel/texturePixel.hlsl");
+    mc::Shader skyboxShaderHandle = sm.AddPixelShader(gm, "assets/pixel/skybox.hlsl");
+    mc::VertexShader& vertexShader = sm.GetVertexShader(vertexShaderHandle);
+    mc::PixelShader& postProcessShader = sm.GetPixelShader(postProcessShaderHandle);
+    mc::PixelShader& texturePixelShader = sm.GetPixelShader(texturePixelShaderHandle);
+    mc::PixelShader& skyboxShader = sm.GetPixelShader(skyboxShaderHandle);
 
     // Load textures
     mc::Texture lavaTexture(gm, "assets/textures/Lava.png");
     mc::Texture skyTexture(gm, "assets/textures/sky.png");
+    mc::Texture moonTexture(gm, "assets/textures/moon.png");
 
     // Init a Const Buffer
     PerFrameConstBuffer perFrameConstBuffer{};
     perFrameConstBuffer.model = XMMatrixIdentity();
     perFrameConstBuffer.view = XMMatrixLookAtLH(XMLoadFloat3(&position), XMLoadFloat3(&target), XMLoadFloat3(&up));
-    perFrameConstBuffer.proj = XMMatrixPerspectiveFovLH((90.0f / 180.0f) * XM_PI, (float)windowWidth / (float)windowHeight, 1.0f, 100.0f);
+    perFrameConstBuffer.proj = XMMatrixPerspectiveFovLH((60.0f / 180.0f) * XM_PI, (float)windowWidth / (float)windowHeight, 1.0f, 100.0f);
     mc::ConstBuffer<PerFrameConstBuffer> constBuffer(gm, mc::ConstBufferBind::Vertex, perFrameConstBuffer, 0);
         
     // create the input layout
@@ -101,7 +104,7 @@ void Demo()
 
     // Create a sphere
     mc::MeshData sphereData;
-    mc::GeometryGenerator::GenerateSphere(1, 3, sphereData);
+    mc::GeometryGenerator::GenerateSphere(1, 20, 20, sphereData);
     mc::VertexBuffer sphereVB(gm, sphereData.vertices.data(), sphereData.vertices.size(), sizeof(mc::Vertex));
     mc::IndexBuffer  sphereIB(gm, sphereData.indices.data(), sphereData.indices.size());
     Mesh sphere(gm, &sphereVB, &IL, &sphereIB);
@@ -114,7 +117,6 @@ void Demo()
 
     mc::FrameBuffer frameBuffer(gm, 0, 0, windowWidth, windowHeight);
 
-
     vertexShader.Bind(gm);
     constBuffer.Bind(gm);
 
@@ -123,6 +125,7 @@ void Demo()
 
     while (engine.IsRunning())
     {
+        sm.HotReaload(gm);
 
         position = XMFLOAT3(20 * std::cosf(time), 0.0f, 20 * -std::sinf(time));
         time += 0.01f;
@@ -139,17 +142,17 @@ void Demo()
 
         // draw to frame buffer
         {
-            texturePixelShader.Bind(gm);
 
-            perFrameConstBuffer.model = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+            perFrameConstBuffer.model = XMMatrixScaling(6.0f, 6.0f, 6.0f);
             perFrameConstBuffer.view = XMMatrixLookAtLH(XMLoadFloat3(&position), XMLoadFloat3(&target), XMLoadFloat3(&up));
-            perFrameConstBuffer.proj = XMMatrixPerspectiveFovLH((90.0f / 180.0f) * XM_PI, (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
+            perFrameConstBuffer.proj = XMMatrixPerspectiveFovLH((60.0f / 180.0f) * XM_PI, (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
             constBuffer.Update(gm, perFrameConstBuffer);
 
             frameBuffer.Bind(gm);
             frameBuffer.Clear(gm, 0.1f, 0.1f, 0.3f);
 
             // Draw sky
+            skyboxShader.Bind(gm);
             gm.SetRasterizerStateCullFront();
             gm.SetDepthStencilOff();
             perFrameConstBuffer.model = XMMatrixTranslation(position.x, position.y, position.z);
@@ -159,24 +162,23 @@ void Demo()
             skyTexture.Unbind(gm, 0);
 
 
-            // Draw planet
             gm.SetRasterizerStateCullBack();
             gm.SetDepthStencilOn();
+            texturePixelShader.Bind(gm);
+
+            // Draw planet
             perFrameConstBuffer.model = XMMatrixScaling(4.0f, 4.0f, 4.0f) * XMMatrixTranslation(0, 0, 0);
             constBuffer.Update(gm, perFrameConstBuffer);
             lavaTexture.Bind(gm, 0);
             sphere.Draw(gm, sphereData.indices.size(), true);
             lavaTexture.Unbind(gm, 0);
 
-
-            // Draw planet
+            // Draw moon
             perFrameConstBuffer.model = XMMatrixScaling(1.0f, 1.0f, 1.0f) * XMMatrixTranslation(5.0f, 0.0f, 0.0f);
             constBuffer.Update(gm, perFrameConstBuffer);
-            lavaTexture.Bind(gm, 0);
+            moonTexture.Bind(gm, 0);
             sphere.Draw(gm, sphereData.indices.size(), true);
-            lavaTexture.Unbind(gm, 0);
-
-
+            moonTexture.Unbind(gm, 0);
         }
 
         // draw to backBuffer
@@ -192,8 +194,6 @@ void Demo()
 
             gm.BindBackBuffer();
             gm.Clear(0.3f, 0.1f, 0.1f);
-
-            
 
             frameBuffer.BindAsTexture(gm, 0);
             quad.Draw(gm, quadData.vertices.size(), false);
