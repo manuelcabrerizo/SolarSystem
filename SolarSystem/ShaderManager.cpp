@@ -1,4 +1,5 @@
 #include "ShaderManager.h"
+#include <iostream>
 
 namespace mc
 {
@@ -23,12 +24,19 @@ namespace mc
     {
         for (auto& pair : shaders_)
         {
-            auto& shader = pair.second;
-            auto p = std::filesystem::current_path() / shader->GetPath();
-            std::filesystem::file_time_type ftime = std::filesystem::last_write_time(p);
-            if (ftime != shader->GetLastWriteTime())
+            try
             {
-                shader->Compile(gm);
+                auto& shader = pair.second;
+                auto p = std::filesystem::current_path() / shader->GetPath();
+                std::filesystem::file_time_type ftime = std::filesystem::last_write_time(p);
+                if (ftime != shader->GetLastWriteTime())
+                {
+                    shader->Compile(gm);
+                }
+            }
+            catch (const std::exception& e)
+            {
+                std::cout << "Error: " << e.what() << "\n";
             }
         }
     }

@@ -38,8 +38,15 @@ namespace mc
         }
 
         // save the write time
-        auto p = std::filesystem::current_path() / filepath_;
-        lastWriteTime_ = std::filesystem::last_write_time(p);
+        try
+        {
+            auto p = std::filesystem::current_path() / filepath_;
+            lastWriteTime_ = std::filesystem::last_write_time(p);
+        }
+        catch (const std::exception& e)
+        {
+            std::cout << "Error: " << e.what() << "\n";
+        }
     }
 
     void VertexShader::Bind(const GraphicsManager& gm)

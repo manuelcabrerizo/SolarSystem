@@ -12,6 +12,7 @@
 #include "Texture.h"
 
 #include "GeometryGenerator.h"
+#include "Camera.h"
 
 namespace mc
 {
