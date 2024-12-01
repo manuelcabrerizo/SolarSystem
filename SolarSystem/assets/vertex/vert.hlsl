@@ -1,12 +1,12 @@
-cbuffer Matrices : register(b0) 
+cbuffer Object : register(b0) 
 {
     matrix model;
-    matrix view;
-    matrix proj;
 };
 
 cbuffer Camera : register(b1)
 {
+    matrix view;
+    matrix proj;
     float3 viewPos;
     float pad;
 };
@@ -22,7 +22,8 @@ struct PS_Input {
     float4 pos : SV_POSITION;
     float3 nor : NORMAL;
     float2 uv : TEXCOORD0;
-    float3 viewDir : TEXTCOORD1;
+    float3 viewDir : TEXCOORD1;
+    float3 fragPos : TEXCOORD2;
 };
 
 PS_Input vs_main(VS_Input i) {
@@ -40,6 +41,7 @@ PS_Input vs_main(VS_Input i) {
     o.nor = wNor;
     o.uv = i.uv;
     o.viewDir = fragPos - viewPos;
+    o.fragPos = fragPos;
     
     return o;
 }

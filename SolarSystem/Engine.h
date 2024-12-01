@@ -12,6 +12,7 @@
 #include "Texture.h"
 
 #include "GeometryGenerator.h"
+#include "Mesh.h"
 #include "Camera.h"
 
 namespace mc
@@ -21,10 +22,11 @@ namespace mc
     public:
         Engine(const std::string& title, int width, int height);
         ~Engine();
-        bool IsRunning();
+
         GraphicsManager& GetGraphicsManager();
         InputManager& GetInputManager();
         ShaderManager& GetShaderManager();
+        bool IsRunning();
         static bool isRunning;
     private:
         InputManager inputManager_;

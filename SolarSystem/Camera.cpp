@@ -16,19 +16,19 @@ namespace mc
         XMVECTOR pos = XMLoadFloat3(&position_);
         if (im.KeyDown(mc::KEY_D))
         {
-            pos += right_ * 0.1f;
+            pos += right_ * 0.5f;
         }
         if (im.KeyDown(mc::KEY_A))
         {
-            pos -= right_ * 0.1f;
+            pos -= right_ * 0.5f;
         }
         if (im.KeyDown(mc::KEY_W))
         {
-            pos += front_ * 0.1f;
+            pos += front_ * 0.5f;
         }
         if (im.KeyDown(mc::KEY_S))
         {
-            pos -= front_ * 0.1f;
+            pos -= front_ * 0.5f;
         }
         XMStoreFloat3(&position_, pos);
 
@@ -42,11 +42,11 @@ namespace mc
         }
         if (im.KeyDown(mc::KEY_UP))
         {
-            rot_.x += 0.025f;
+            rot_.x -= 0.025f;
         }
         if (im.KeyDown(mc::KEY_DOWN))
         {
-            rot_.x -= 0.025f;
+            rot_.x += 0.025f;
         }
         if (rot_.x > (89.0f / 180.0f) * XM_PI)
             rot_.x = (89.0f / 180.0f) * XM_PI;

@@ -1,4 +1,6 @@
 #include "GeometryGenerator.h"
+#include <stdexcept>
+#include <fstream>
 
 namespace mc
 {
@@ -16,7 +18,6 @@ namespace mc
         meshData.vertices.resize(6);
         memcpy(meshData.vertices.data(), vertices, sizeof(Vertex) * 6);
     }
-
     void GeometryGenerator::GenerateSphere(float radius, unsigned int sliceCount, unsigned int stackCount, MeshData& meshData)
     {
         meshData.vertices.clear();
@@ -126,8 +127,6 @@ namespace mc
             meshData.indices.push_back(baseIndex + i + 1);
         }
     }
-
-
     void GeometryGenerator::GenerateGeosphere(float radius, unsigned int numSubdivisions, MeshData& meshData)
     {
         // Put a cap on the number of subdivisions.
@@ -197,6 +196,119 @@ namespace mc
 
             XMVECTOR T = XMLoadFloat3(&meshData.vertices[i].tangent);
             XMStoreFloat3(&meshData.vertices[i].tangent, XMVector3Normalize(T));
+        }
+    }
+    void GeometryGenerator::LoadOBJFile(MeshData& meshData, const std::string& filepath)
+    {
+        std::ifstream file;
+        file.open(filepath, std::ios::in);
+        if (file.is_open()) {
+
+            std::vector<XMFLOAT3> positions;
+            std::vector<XMFLOAT3> normals;
+            std::vector<XMFLOAT2> uvs;
+
+            std::string line;
+            while (getline(file, line)) {
+                if (line.find("v ", 0, 2) == 0) {
+                    XMFLOAT3 position;
+                    sscanf_s(line.c_str(), "v %f %f %f", &position.x, &position.y, &position.z);
+                    positions.push_back(position);
+                }
+                else if (line.find("vn", 0, 2) == 0) {
+                    XMFLOAT3 normal;
+                    sscanf_s(line.c_str(), "vn %f %f %f", &normal.x, &normal.y, &normal.z);
+                    normals.push_back(normal);
+                }
+                else if (line.find("vt", 0, 2) == 0) {
+                    XMFLOAT2 uv;
+                    float pad;
+                    sscanf_s(line.c_str(), "vt %f %f %f", &uv.x, &uv.y, &pad);
+                    uvs.push_back(uv);
+                }
+            }
+
+            file.clear();
+            file.seekg(0);
+
+            while (getline(file, line)) {
+                if (line.find("f ", 0, 2) == 0) {
+                    int posIndex[3];
+                    int norIndex[3];
+                    int uvsIndex[3];
+                    sscanf_s(line.c_str(), "f %d/%d/%d %d/%d/%d %d/%d/%d",
+                        &posIndex[0], &uvsIndex[0], &norIndex[0],
+                        &posIndex[1], &uvsIndex[1], &norIndex[1],
+                        &posIndex[2], &uvsIndex[2], &norIndex[2]);
+
+                    Vertex vertex{};
+                    for (int i = 0; i < 3; i++) {
+                        vertex.position = positions[posIndex[i] - 1];
+                        vertex.normal = normals[norIndex[i] - 1];
+                        vertex.uv = uvs[uvsIndex[i] - 1];
+                        meshData.vertices.push_back(vertex);
+                    }
+                }
+            }
+            file.close();
+        }
+        else 
+        {
+            throw std::runtime_error("Error opening the obj file");
+        }
+    }
+
+
+    void GeometryGenerator::LoadCollisionDataFromOBJFile(CollisionData& collisionData, const std::string& filepath)
+    {
+        std::ifstream file;
+        file.open(filepath, std::ios::in);
+        if (file.is_open()) {
+
+            std::vector<XMFLOAT3> positions;
+            std::vector<XMFLOAT3> normals;
+
+            std::string line;
+            while (getline(file, line)) {
+                if (line.find("v ", 0, 2) == 0) {
+                    XMFLOAT3 position;
+                    sscanf_s(line.c_str(), "v %f %f %f", &position.x, &position.y, &position.z);
+                    positions.push_back(position);
+                }
+                else if (line.find("vn", 0, 2) == 0) {
+                    XMFLOAT3 normal;
+                    sscanf_s(line.c_str(), "vn %f %f %f", &normal.x, &normal.y, &normal.z);
+                    normals.push_back(normal);
+                }
+            }
+
+            file.clear();
+            file.seekg(0);
+
+            while (getline(file, line)) {
+                if (line.find("f ", 0, 2) == 0) {
+                    int posIndex[4];
+                    int norIndex[4];
+                    int uvsIndex[4];
+                    sscanf_s(line.c_str(), "f %d/%d/%d %d/%d/%d %d/%d/%d %d/%d/%d",
+                        &posIndex[0], &uvsIndex[0], &norIndex[0],
+                        &posIndex[1], &uvsIndex[1], &norIndex[1],
+                        &posIndex[2], &uvsIndex[2], &norIndex[2],
+                        &posIndex[3], &uvsIndex[3], &norIndex[3]);
+
+                    CollisionQuad quad{};
+                    quad.normal = normals[norIndex[0] - 1];
+                    for (int i = 0; i < 4; i++) {
+                        quad.vertices[i] = positions[posIndex[i] - 1];
+                    }
+                    collisionData.quads.push_back(quad);
+                }
+            }
+            file.close();
+        }
+        else
+        {
+            throw std::runtime_error("Error opening the obj file");
         }
     }
 
@@ -279,7 +391,6 @@ namespace mc
             meshData.indices.push_back(i * 6 + 4);
         }
     }
-
     float GeometryGenerator::AngleFromXY(float x, float y)
     {
         float theta = 0.0f;

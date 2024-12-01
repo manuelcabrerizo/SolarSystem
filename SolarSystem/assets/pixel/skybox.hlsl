@@ -6,7 +6,8 @@ struct PS_Input
     float4 pos : SV_POSITION;
     float3 nor : NORMAL;
     float2 uv : TEXCOORD0;
-    float3 viewDir : TEXTCOORD1;
+    float3 viewDir : TEXCOORD1;
+    float3 fragPos : TEXCOORD2;
 };
 
 #define PI 3.14159265359
