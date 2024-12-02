@@ -7,11 +7,16 @@ using namespace DirectX;
 
 namespace mc
 {
+    struct CollisionData;
+
     class Ship
     {
     public:
         Ship(const XMFLOAT3& position, float mass, float radio);
-        void Update(const InputManager& im, float dt);
+        void Update(
+            const InputManager& im, float dt,
+            CollisionData* collisionDataArray[],
+            unsigned int collisionDataCount);
         XMFLOAT3 GetPosition() const;
         XMVECTOR GetOrientation() const;
         XMVECTOR GetFront() const { return front_; }
@@ -20,6 +25,8 @@ namespace mc
         XMVECTOR GetVelocity() const { return vel_; }
     private:
         void ProcessInput(const InputManager& im, float dt);
+        void ProcessVelocities(float dt);
+        void ProcessCollision(CollisionData* collisionData, float dt);
 
         XMVECTOR pos_{};
         XMVECTOR vel_{};

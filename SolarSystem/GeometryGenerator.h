@@ -31,7 +31,6 @@ namespace mc
     struct CollisionData
     {
         std::vector<CollisionQuad> quads;
-
     };
 
     class GeometryGenerator

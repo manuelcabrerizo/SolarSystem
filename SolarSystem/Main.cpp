@@ -192,8 +192,6 @@ void Demo()
     mc::Texture sunTexture(gm, "assets/textures/sun.png");
     mc::Texture shipTexture(gm, "assets/textures/Overtone_Default_Diffuse.png");
 
-
-
     // Init a Const Buffer
     ObjectConstBuffer objectCPUBuffer{};
     objectCPUBuffer.model = XMMatrixIdentity();
@@ -266,19 +264,16 @@ void Demo()
     mc::VertexBuffer shipDataVB(gm, shipData.vertices.data(), shipData.vertices.size(), sizeof(mc::Vertex));
     mc::Mesh shipMesh(gm, &shipDataVB, &IL, nullptr, shipData.vertices.size(), false);
     
-    
     // Load collision data
     mc::CollisionData collisionDataOuter;
     mc::GeometryGenerator::LoadCollisionDataFromOBJFile(collisionDataOuter, "assets/mesh/track_outer_col.obj");
     mc::CollisionData collisionDataInner;
     mc::GeometryGenerator::LoadCollisionDataFromOBJFile(collisionDataInner, "assets/mesh/track_inner_col.obj");
 
-
-
     mc::FrameBuffer frameBuffer(gm, 0, 0, windowWidth, windowHeight);
 
     XMFLOAT3 position = XMFLOAT3(-2.5, 0.0125f, 0);
-    mc::Ship shipBody(position, 2.0f, 0.25f);
+    mc::Ship shipBody(position, 2.0f, 0.04f);
 
     //Scene test
     Scene scene(&objectCPUBuffer, &objectGPUBuffer);
@@ -380,7 +375,12 @@ void Demo()
 
         sm.HotReaload(gm);
 
-        shipBody.Update(im, dt);
+        mc::CollisionData* collisionDataArray[] = {
+            &collisionDataOuter,
+            &collisionDataInner
+        };
+
+        shipBody.Update(im, dt, collisionDataArray, 2);
         ship.SetRotation(shipBody.GetOrientation());
           
         XMFLOAT3 shipPos = shipBody.GetPosition();
@@ -407,7 +407,7 @@ void Demo()
         gm.SetRasterizerStateCullNone();
 
         float shipVel = XMVectorGetX(XMVector3Length(shipBody.GetVelocity()));
-        float fov = Lerp(fovMin, fovMax, std::clamp(shipVel * shipVel, 0.0f, 1.0f));
+        float fov = fovMax;// Lerp(fovMin, fovMax, std::clamp(shipVel * shipVel, 0.0f, 1.0f));
 
         // Update the camera const buffer
         cameraCPUBuffer.view = camera.GetViewMat();
