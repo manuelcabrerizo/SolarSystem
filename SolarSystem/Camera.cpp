@@ -1,5 +1,5 @@
 #include "Camera.h"
-
+#include "Ship.h"
 namespace mc
 {
     Camera::Camera(const XMFLOAT3& position)
@@ -13,40 +13,42 @@ namespace mc
     void Camera::Update(const InputManager& im, float dt)
     {
         // TODO: camera input
+        float speed = 0.5f;
         XMVECTOR pos = XMLoadFloat3(&position_);
         if (im.KeyDown(mc::KEY_D))
         {
-            pos += right_ * 0.5f;
+            pos += right_ * speed * dt;
         }
         if (im.KeyDown(mc::KEY_A))
         {
-            pos -= right_ * 0.5f;
+            pos -= right_ * speed * dt;
         }
         if (im.KeyDown(mc::KEY_W))
         {
-            pos += front_ * 0.5f;
+            pos += front_ * speed * dt;
         }
         if (im.KeyDown(mc::KEY_S))
         {
-            pos -= front_ * 0.5f;
+            pos -= front_ * speed * dt;
         }
         XMStoreFloat3(&position_, pos);
 
+        float rotationSpeed = 1.0f;
         if (im.KeyDown(mc::KEY_RIGHT))
         {
-            rot_.y += 0.025f;
+            rot_.y += rotationSpeed * dt;
         }
         if (im.KeyDown(mc::KEY_LEFT))
         {
-            rot_.y -= 0.025f;
+            rot_.y -= rotationSpeed * dt;
         }
         if (im.KeyDown(mc::KEY_UP))
         {
-            rot_.x -= 0.025f;
+            rot_.x -= rotationSpeed * dt;
         }
         if (im.KeyDown(mc::KEY_DOWN))
         {
-            rot_.x += 0.025f;
+            rot_.x += rotationSpeed * dt;
         }
         if (rot_.x > (89.0f / 180.0f) * XM_PI)
             rot_.x = (89.0f / 180.0f) * XM_PI;
@@ -54,6 +56,22 @@ namespace mc
             rot_.x = -(89.0f / 180.0f) * XM_PI;
 
         CalculateViewMat();
+    }
+
+    void Camera::FollowShip(const Ship& ship)
+    {
+        // TODO: fix this
+        XMFLOAT3 position = ship.GetPosition();
+        XMVECTOR shipPos = XMLoadFloat3(&position);
+        XMVECTOR offset = ship.GetUp() * 0.125f;
+
+        XMVECTOR pos = shipPos - (ship.GetFront() * 0.25f) + offset;
+        XMStoreFloat3(&position_, pos);
+
+        front_ = XMVector3Normalize(shipPos - pos);
+        right_ = ship.GetRight();// XMVector3Normalize(XMVector3Cross(worldUp_, front_));
+        up_ = XMVector3Normalize(XMVector3Cross(front_, right_));
+        view_ = XMMatrixLookAtLH(pos, pos + front_, up_);
     }
 
     const XMMATRIX& Camera::GetViewMat()

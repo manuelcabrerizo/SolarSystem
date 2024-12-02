@@ -5,6 +5,8 @@
 #include <DirectXMath.h>
 #include "Engine.h"
 
+#include "Ship.h"
+
 using namespace DirectX;
 
 struct ObjectConstBuffer
@@ -48,7 +50,7 @@ public:
     {
         position_ = XMVectorSet(x, y, z, 1.0f);
     }
-    void SerRotation(XMVECTOR rotation)
+    void SetRotation(XMVECTOR rotation)
     {
         rotation_ = rotation;
     }
@@ -148,13 +150,23 @@ void SceneNode::Draw(const mc::GraphicsManager& gm, const Scene& scene)
 constexpr int windowWidth = 1280;
 constexpr int windowHeight = 720;
 
+float Lerp(float a, float b, float t)
+{
+    return a + (b - a) * t;
+}
+
 void Demo()
 {
     // Camera variables
-    float nearPlane = 0.1f;
-    float farPlane = 1000.0f;
-    float fov = (60.0f / 180.0f) * XM_PI;
+    float nearPlane = 0.01f;
+    float farPlane = 100.0f;
+    float fovMin = (60.0f / 180.0f) * XM_PI;
+    float fovMax = (90.0f / 180.0f) * XM_PI;
     float aspectRation = (float)windowWidth / (float)windowHeight;
+
+    // Quary the clock frequency
+    LARGE_INTEGER frequency;
+    QueryPerformanceFrequency(&frequency);
 
     mc::Engine engine("Solar System", windowWidth, windowHeight);
     mc::GraphicsManager& gm = engine.GetGraphicsManager();
@@ -162,7 +174,7 @@ void Demo()
     mc::ShaderManager& sm = engine.GetShaderManager();
 
     // Camera Variables
-    mc::Camera camera(XMFLOAT3(0.0f, 0.0f, -120.0f));
+    mc::Camera camera(XMFLOAT3(0, 0, 0));
 
     // Init Shaders
     sm.AddVertexShader("vert", gm, "assets/vertex/vert.hlsl");
@@ -189,7 +201,7 @@ void Demo()
 
     CameraConstBuffer cameraCPUBuffer{};
     cameraCPUBuffer.view = camera.GetViewMat();
-    cameraCPUBuffer.proj = XMMatrixPerspectiveFovLH(fov, aspectRation, nearPlane, farPlane);
+    cameraCPUBuffer.proj = XMMatrixPerspectiveFovLH(fovMin, aspectRation, nearPlane, farPlane);
     cameraCPUBuffer.viewPos = camera.GetPosition();
     mc::ConstBuffer<CameraConstBuffer> cameraGPUBuffer(gm, mc::ConstBufferBind::Vertex, cameraCPUBuffer, 1);
 
@@ -265,6 +277,9 @@ void Demo()
 
     mc::FrameBuffer frameBuffer(gm, 0, 0, windowWidth, windowHeight);
 
+    XMFLOAT3 position = XMFLOAT3(-2.5, 0.0125f, 0);
+    mc::Ship shipBody(position, 2.0f, 0.25f);
+
     //Scene test
     Scene scene(&objectCPUBuffer, &objectGPUBuffer);
 
@@ -274,8 +289,8 @@ void Demo()
     ship.SetTexture(&shipTexture);
     ship.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     ship.SetPixelShader((mc::PixelShader*)sm.Get("sun"));
-    ship.SetPosition(250, 4, 0);
-    ship.SetScale(1, 1, 1);
+    ship.SetPosition(position.x, position.y, position.z);
+    ship.SetScale(0.0125f*0.5f, 0.0125f*0.5f, 0.0125f*0.5f);
 
     // Create track base
     SceneNode& trackBase = scene.AddNode();
@@ -284,7 +299,7 @@ void Demo()
     trackBase.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     trackBase.SetPixelShader((mc::PixelShader*)sm.Get("sun"));
     trackBase.SetPosition(0, 0, 0);
-    trackBase.SetScale(100, 100, 100);
+    trackBase.SetScale(1, 1, 1);
 
     // Create track inner
     SceneNode& trackInner = scene.AddNode();
@@ -293,7 +308,7 @@ void Demo()
     trackInner.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     trackInner.SetPixelShader((mc::PixelShader*)sm.Get("sun"));
     trackInner.SetPosition(0, 0, 0);
-    trackInner.SetScale(100, 100, 100);
+    trackInner.SetScale(1, 1, 1);
 
     // Create track inner
     SceneNode& trackOuter = scene.AddNode();
@@ -302,7 +317,7 @@ void Demo()
     trackOuter.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     trackOuter.SetPixelShader((mc::PixelShader*)sm.Get("sun"));
     trackOuter.SetPosition(0, 0, 0);
-    trackOuter.SetScale(100, 100, 100);
+    trackOuter.SetScale(1, 1, 1);
 
     // Create sun
     SceneNode& sun = scene.AddNode();
@@ -311,7 +326,7 @@ void Demo()
     sun.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     sun.SetPixelShader((mc::PixelShader*)sm.Get("sun"));
     sun.SetPosition(0, 0, 0);
-    sun.SetScale(60, 60, 60);
+    sun.SetScale(1, 1, 1);
 
     // Create the planet
     SceneNode& planet = sun.AddNode();
@@ -319,8 +334,8 @@ void Demo()
     planet.SetTexture(&lavaTexture);
     planet.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     planet.SetPixelShader((mc::PixelShader*)sm.Get("texturePixel"));
-    planet.SetPosition(60, 0, 0);
-    planet.SetScale(4, 4, 4);
+    planet.SetPosition(2, 1, 0);
+    planet.SetScale(1, 1, 1);
 
     // Create the moon
     SceneNode& moon = planet.AddNode();
@@ -328,7 +343,7 @@ void Demo()
     moon.SetTexture(&moonTexture);
     moon.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     moon.SetPixelShader((mc::PixelShader*)sm.Get("texturePixel"));
-    moon.SetPosition(6, 0, 0);
+    moon.SetPosition(0, 1, 2);
     moon.SetScale(1, 1, 1);
 
     SceneNode& jupiter = sun.AddNode();
@@ -336,36 +351,49 @@ void Demo()
     jupiter.SetTexture(&planet1Texture);
     jupiter.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     jupiter.SetPixelShader((mc::PixelShader*)sm.Get("texturePixel"));
-    jupiter.SetPosition(120, 0, 0);
-    jupiter.SetScale(20, 20, 20);
+    jupiter.SetPosition(4, 1, 0);
+    jupiter.SetScale(1, 1, 1);
 
     SceneNode& saturn = sun.AddNode();
     saturn.SetMesh(&sphere);
     saturn.SetTexture(&planet2Texture);
     saturn.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     saturn.SetPixelShader((mc::PixelShader*)sm.Get("texturePixel"));
-    saturn.SetPosition(120, 0, 0);
-    saturn.SetScale(10, 10, 10);
-
+    saturn.SetPosition(6, 1, 0);
+    saturn.SetScale(1, 1, 1);
 
     sm.Get("vert")->Bind(gm);
     objectGPUBuffer.Bind(gm);
     cameraGPUBuffer.Bind(gm);
     lightGPUBuffer.Bind(gm);
 
-    float time = 0.0f;
+    LARGE_INTEGER lastCounter;
+    QueryPerformanceCounter(&lastCounter); 
 
     while (engine.IsRunning())
     {
-        time += 0.01f;
+        LARGE_INTEGER currentCounter;
+        QueryPerformanceCounter(&currentCounter);
+        double lastTime = (double)lastCounter.QuadPart / frequency.QuadPart;
+        double currentTime = (double)currentCounter.QuadPart / frequency.QuadPart;
+        float dt = static_cast<float>(currentTime - lastTime);
+
         sm.HotReaload(gm);
 
-        camera.Update(im, 0.016f);
+        shipBody.Update(im, dt);
+        ship.SetRotation(shipBody.GetOrientation());
+          
+        XMFLOAT3 shipPos = shipBody.GetPosition();
+        ship.SetPosition(shipPos.x, shipPos.y, shipPos.z);
+
+        //camera.Update(im, dt);
+        camera.FollowShip(shipBody);
 
         lightCPUBuffer.viewPos = camera.GetPosition();
         lightGPUBuffer.Update(gm, lightCPUBuffer);
 
         // Update planets position and rotation
+        /*
         sun.SerRotation(XMQuaternionRotationRollPitchYaw(0, -time*0.1f, 0));
         planet.SetPosition(100.0f * std::cosf(time*0.2f + 10), 0.0f, 100.0f * std::sinf(time*0.2f + 10));
         planet.SerRotation(XMQuaternionRotationRollPitchYaw(0, -time*2.0f, 0));
@@ -375,8 +403,11 @@ void Demo()
         jupiter.SerRotation(XMQuaternionRotationRollPitchYaw(0, -time, 0));
         saturn.SetPosition(150.0f * std::cosf(time * 0.1f + 50), 0.0f, 150.0f * std::sinf(time * 0.1f + 50.0f));
         saturn.SerRotation(XMQuaternionRotationRollPitchYaw(0, -time * 0.5f, 0));
-
+        */
         gm.SetRasterizerStateCullNone();
+
+        float shipVel = XMVectorGetX(XMVector3Length(shipBody.GetVelocity()));
+        float fov = Lerp(fovMin, fovMax, std::clamp(shipVel * shipVel, 0.0f, 1.0f));
 
         // Update the camera const buffer
         cameraCPUBuffer.view = camera.GetViewMat();
@@ -389,19 +420,15 @@ void Demo()
         // Draw sky
         {
             // Compute the sky coord system so is always facing the camera
-            XMFLOAT3 target = camera.GetTarget();
-            XMVECTOR front = XMVector3Normalize(XMLoadFloat3(&camera.GetPosition()) - XMLoadFloat3(&target));
-            XMVECTOR right = XMVector3Normalize(XMVector3Cross(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), front));
-            XMVECTOR up = XMVector3Cross(front, right);
-
             // Compute the scale so the quad fill the screen 
             float a = (farPlane * 0.5f);
             float ys = (std::tanf(fov * 0.5f) * a) * 2.0f;
             float xs = ys * aspectRation;
 
-            XMVECTOR viewDir = XMVector3Normalize(XMLoadFloat3(&target) - XMLoadFloat3(&camera.GetPosition()));
+            XMVECTOR viewDir = camera.GetFront();
             XMMATRIX translationMat = XMMatrixTranslationFromVector(XMLoadFloat3(&camera.GetPosition()) + (viewDir * a));
-            XMMATRIX rotationMat = XMMatrixRotationY(XM_PI) * XMMATRIX(right, up, front, XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f));
+            XMMATRIX rotationMat = 
+                XMMATRIX(camera.GetRight(), camera.GetUp(), camera.GetFront(), XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f));
             XMMATRIX scaleMat = XMMatrixScaling(xs, ys, 1.0f);
 
             objectCPUBuffer.model = scaleMat * rotationMat * translationMat;
@@ -434,6 +461,8 @@ void Demo()
         }
 
         gm.Present();
+
+        lastCounter = currentCounter;
     }
 }
 
