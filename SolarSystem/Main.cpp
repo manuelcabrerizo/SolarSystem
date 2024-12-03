@@ -41,6 +41,13 @@ struct LightConstBuffer
     XMFLOAT3 viewPos;
 };
 
+struct CommonConstBuffer
+{
+    XMFLOAT2 resolution;
+    float time;
+    float pad0;
+};
+
 class Scene;
 
 class SceneNode
@@ -182,6 +189,10 @@ void Demo()
     sm.AddPixelShader("texturePixel", gm, "assets/pixel/texturePixel.hlsl");
     sm.AddPixelShader("skybox", gm, "assets/pixel/skybox.hlsl");
     sm.AddPixelShader("sun", gm, "assets/pixel/sunPixel.hlsl");
+    sm.AddPixelShader("trackBase", gm, "assets/pixel/trackBase.hlsl");
+    sm.AddPixelShader("trackRail", gm, "assets/pixel/trackRail.hlsl");
+    sm.AddPixelShader("ship", gm, "assets/pixel/ship.hlsl");
+
 
     // Load textures
     mc::Texture lavaTexture(gm, "assets/textures/Lava.png");
@@ -205,7 +216,7 @@ void Demo()
 
     LightConstBuffer lightCPUBuffer{};
     lightCPUBuffer.count = 1;
-    lightCPUBuffer.lights[0].position = XMFLOAT3(0, 0, 0);
+    lightCPUBuffer.lights[0].position = XMFLOAT3(0, 1, 0);
     lightCPUBuffer.lights[0].constant = 1.0f;
     lightCPUBuffer.lights[0].linear = 0.0014f;
     lightCPUBuffer.lights[0].quadratic = 0.000007;
@@ -214,6 +225,11 @@ void Demo()
     lightCPUBuffer.lights[0].specular = XMFLOAT3(2.0f, 2.0f,2.0f);
     lightCPUBuffer.viewPos = camera.GetPosition();
     mc::ConstBuffer<LightConstBuffer> lightGPUBuffer(gm, mc::ConstBufferBind::Pixel, lightCPUBuffer, 2);
+
+    CommonConstBuffer commonCPUBuffer{};
+    commonCPUBuffer.resolution = XMFLOAT2(windowWidth, windowHeight);
+    commonCPUBuffer.time = 0.0f;
+    mc::ConstBuffer<CommonConstBuffer> commonGPUBuffer(gm, mc::ConstBufferBind::Pixel, commonCPUBuffer, 3);
         
     // create the input layout
     mc::InputLayoutDesc desc = {
@@ -283,36 +299,9 @@ void Demo()
     ship.SetMesh(&shipMesh);
     ship.SetTexture(&shipTexture);
     ship.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
-    ship.SetPixelShader((mc::PixelShader*)sm.Get("sun"));
+    ship.SetPixelShader((mc::PixelShader*)sm.Get("ship"));
     ship.SetPosition(position.x, position.y, position.z);
     ship.SetScale(0.0125f*0.5f, 0.0125f*0.5f, 0.0125f*0.5f);
-
-    // Create track base
-    SceneNode& trackBase = scene.AddNode();
-    trackBase.SetMesh(&trackBaseMesh);
-    trackBase.SetTexture(&planet2Texture);
-    trackBase.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
-    trackBase.SetPixelShader((mc::PixelShader*)sm.Get("sun"));
-    trackBase.SetPosition(0, 0, 0);
-    trackBase.SetScale(1, 1, 1);
-
-    // Create track inner
-    SceneNode& trackInner = scene.AddNode();
-    trackInner.SetMesh(&trackInnerMesh);
-    trackInner.SetTexture(&planet1Texture);
-    trackInner.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
-    trackInner.SetPixelShader((mc::PixelShader*)sm.Get("sun"));
-    trackInner.SetPosition(0, 0, 0);
-    trackInner.SetScale(1, 1, 1);
-
-    // Create track inner
-    SceneNode& trackOuter = scene.AddNode();
-    trackOuter.SetMesh(&trackOuterMesh);
-    trackOuter.SetTexture(&planet1Texture);
-    trackOuter.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
-    trackOuter.SetPixelShader((mc::PixelShader*)sm.Get("sun"));
-    trackOuter.SetPosition(0, 0, 0);
-    trackOuter.SetScale(1, 1, 1);
 
     // Create sun
     SceneNode& sun = scene.AddNode();
@@ -320,7 +309,7 @@ void Demo()
     sun.SetTexture(&sunTexture);
     sun.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     sun.SetPixelShader((mc::PixelShader*)sm.Get("sun"));
-    sun.SetPosition(0, 0, 0);
+    sun.SetPosition(0, 1, 0);
     sun.SetScale(1, 1, 1);
 
     // Create the planet
@@ -357,10 +346,44 @@ void Demo()
     saturn.SetPosition(6, 1, 0);
     saturn.SetScale(1, 1, 1);
 
+    //////////////////////////////////////
+    // Add translucid objects
+    //////////////////////////////////////
+    // Create track base
+    SceneNode& trackBase = scene.AddNode();
+    trackBase.SetMesh(&trackBaseMesh);
+    trackBase.SetTexture(&planet2Texture);
+    trackBase.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
+    trackBase.SetPixelShader((mc::PixelShader*)sm.Get("trackBase"));
+    trackBase.SetPosition(0, 0, 0);
+    trackBase.SetScale(1, 1, 1);
+
+    // Create track inner
+    SceneNode& trackInner = scene.AddNode();
+    trackInner.SetMesh(&trackInnerMesh);
+    trackInner.SetTexture(&planet1Texture);
+    trackInner.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
+    trackInner.SetPixelShader((mc::PixelShader*)sm.Get("trackRail"));
+    trackInner.SetPosition(0, 0, 0);
+    trackInner.SetScale(1, 1, 1);
+
+    // Create track inner
+    SceneNode& trackOuter = scene.AddNode();
+    trackOuter.SetMesh(&trackOuterMesh);
+    trackOuter.SetTexture(&planet1Texture);
+    trackOuter.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
+    trackOuter.SetPixelShader((mc::PixelShader*)sm.Get("trackRail"));
+    trackOuter.SetPosition(0, 0, 0);
+    trackOuter.SetScale(1, 1, 1);
+
+    // Set Alpha blending
+    gm.SetAlphaBlending();
+
     sm.Get("vert")->Bind(gm);
     objectGPUBuffer.Bind(gm);
     cameraGPUBuffer.Bind(gm);
     lightGPUBuffer.Bind(gm);
+    commonGPUBuffer.Bind(gm);
 
     LARGE_INTEGER lastCounter;
     QueryPerformanceCounter(&lastCounter); 
@@ -372,6 +395,9 @@ void Demo()
         double lastTime = (double)lastCounter.QuadPart / frequency.QuadPart;
         double currentTime = (double)currentCounter.QuadPart / frequency.QuadPart;
         float dt = static_cast<float>(currentTime - lastTime);
+
+        commonCPUBuffer.time += dt;
+        commonGPUBuffer.Update(gm, commonCPUBuffer);
 
         sm.HotReaload(gm);
 
@@ -407,7 +433,7 @@ void Demo()
         gm.SetRasterizerStateCullNone();
 
         float shipVel = XMVectorGetX(XMVector3Length(shipBody.GetVelocity()));
-        float fov = fovMax;// Lerp(fovMin, fovMax, std::clamp(shipVel * shipVel, 0.0f, 1.0f));
+        float fov = Lerp(fovMin, fovMax, std::clamp(shipVel * shipVel, 0.0f, 1.0f));
 
         // Update the camera const buffer
         cameraCPUBuffer.view = camera.GetViewMat();

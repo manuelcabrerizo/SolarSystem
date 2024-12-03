@@ -193,6 +193,62 @@
   <ItemGroup>
     <ResourceCompile Include="SolarSystem.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\pixel\trackBase.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\pixel\postProcess.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="assets\pixel\skybox.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="assets\pixel\sunPixel.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="assets\pixel\texturePixel.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\vertex\vert.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="assets\textures\Lava.png" />
+    <Image Include="assets\textures\moon.png" />
+    <Image Include="assets\textures\Overtone_Default_Diffuse.png" />
+    <Image Include="assets\textures\planet.png" />
+    <Image Include="assets\textures\planet2.png" />
+    <Image Include="assets\textures\sky.png" />
+    <Image Include="assets\textures\sky3.png" />
+    <Image Include="assets\textures\sun.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\pixel\trackRail.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\pixel\ship.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -143,4 +143,40 @@
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\pixel\trackBase.hlsl" />
+    <None Include="assets\pixel\postProcess.hlsl" />
+    <None Include="assets\pixel\skybox.hlsl" />
+    <None Include="assets\pixel\sunPixel.hlsl" />
+    <None Include="assets\pixel\texturePixel.hlsl" />
+    <None Include="assets\vertex\vert.hlsl" />
+    <None Include="assets\pixel\trackRail.hlsl" />
+    <None Include="assets\pixel\ship.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="assets\textures\Lava.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="assets\textures\moon.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="assets\textures\Overtone_Default_Diffuse.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="assets\textures\planet.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="assets\textures\planet2.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="assets\textures\sky.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="assets\textures\sky3.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="assets\textures\sun.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
 </Project>

@@ -63,13 +63,13 @@ namespace mc
         // TODO: fix this
         XMFLOAT3 position = ship.GetPosition();
         XMVECTOR shipPos = XMLoadFloat3(&position);
-        XMVECTOR offset = ship.GetUp() * 0.125f;
+        XMVECTOR offset = worldUp_ * 0.125f;
 
-        XMVECTOR pos = shipPos - (ship.GetFront() * 0.25f) + offset;
+        XMVECTOR pos = shipPos - (ship.GetForward() * 0.25f) + offset;
         XMStoreFloat3(&position_, pos);
 
         front_ = XMVector3Normalize(shipPos - pos);
-        right_ = ship.GetRight();// XMVector3Normalize(XMVector3Cross(worldUp_, front_));
+        right_ = XMVector3Normalize(XMVector3Cross(worldUp_, front_));
         up_ = XMVector3Normalize(XMVector3Cross(front_, right_));
         view_ = XMMatrixLookAtLH(pos, pos + front_, up_);
     }

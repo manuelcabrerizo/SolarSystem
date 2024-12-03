@@ -3,6 +3,7 @@
 
 #include <utility>
 #include <iostream>
+#include <algorithm>
 namespace mc
 {
     Ship::Ship(const XMFLOAT3& position, float mass, float radio)
@@ -11,6 +12,8 @@ namespace mc
         right_ = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
         up_ = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
         front_ = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+        forward_ = front_;
+        worldUp_ = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     }
 
     void Ship::ProcessInput(const InputManager& im, float dt)
@@ -24,25 +27,6 @@ namespace mc
         {
             yawVel_ += rotationSpeed * dt;
         }
-        /*
-        if (im.KeyDown(mc::KEY_W))
-        {
-            pitchVel_ += rotationSpeed * dt;
-        }
-        if (im.KeyDown(mc::KEY_S))
-        {
-            pitchVel_ -= rotationSpeed * dt;
-        }
-        if (im.KeyDown(mc::KEY_A))
-        {
-            rollVel_ += rotationSpeed * dt;
-        }
-        if (im.KeyDown(mc::KEY_D))
-        {
-            rollVel_ -= rotationSpeed * dt;
-        }
-        */
-
         if (im.KeyDown(mc::KEY_W))
         {
             thrustMagnitude_ = std::min(thrustMagnitude_ + (100.0f * dt), thrustMax_);
@@ -55,25 +39,16 @@ namespace mc
 
     void Ship::ProcessVelocities(float dt)
     {
-        if (pitchVel_ != 0.0f)
-        {
-            front_ = XMVector3Rotate(front_, XMQuaternionRotationAxis(right_, pitchVel_ * dt));
-            up_ = XMVector3Normalize(XMVector3Cross(front_, right_));
-        }
-        if (yawVel_ != 0.0f)
-        {
-            front_ = XMVector3Rotate(front_, XMQuaternionRotationAxis(up_, yawVel_ * dt));
-            right_ = XMVector3Normalize(XMVector3Cross(up_, front_));
-        }
-        if (rollVel_ != 0.0f)
-        {
-            right_ = XMVector3Rotate(right_, XMQuaternionRotationAxis(front_, rollVel_ * dt));
-            up_ = XMVector3Normalize(XMVector3Cross(front_, right_));
-        }
+        rollVel_ = yawVel_*-0.25f;
+        forward_ = XMVector3Rotate(forward_, XMQuaternionRotationAxis(worldUp_, yawVel_ * dt));
+        front_ = XMVector3Rotate(front_, XMQuaternionRotationAxis(worldUp_, yawVel_ * dt));
+        XMVECTOR worldRight = XMVector3Cross(worldUp_, forward_);
+        right_ = XMVector3Rotate(worldRight, XMQuaternionRotationAxis(forward_, rollVel_));
+        up_ = XMVector3Normalize(XMVector3Cross(front_, right_));
 
-        thrust_ = front_ * (thrustMagnitude_ * dt);
+        thrust_ = forward_ * (thrustMagnitude_ * dt);
 
-        XMVECTOR noseVel = front_ * XMVector3Length(vel_);
+        XMVECTOR noseVel = forward_ * XMVector3Length(vel_);
 
         XMVECTOR force = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
         force += thrust_;
@@ -87,7 +62,6 @@ namespace mc
 
         float damping = std::powf(damping_, dt);
         vel_ *= damping;
-        pitchVel_ *= damping;
         yawVel_ *= damping;
         rollVel_ *= damping;
     }
@@ -108,7 +82,6 @@ namespace mc
             float width = XMVectorGetX(XMVector3Length(b - a));
             float height = XMVectorGetX(XMVector3Length(d - a));
 
-
             // first we have to get a basis for this quad
             XMVECTOR origin = XMVectorSet(quad.vertices[0].x, quad.vertices[0].y, quad.vertices[0].z, 1.0f) + (n * radio_);
             XMVECTOR right = XMVector3Normalize(b - a);
@@ -119,18 +92,18 @@ namespace mc
             XMVECTOR relPos_ = XMVector3Transform(pos_, XMMatrixInverse(nullptr, basisMatrix));
             XMFLOAT3 relPos;
             XMStoreFloat3(&relPos, relPos_);
-            if ((relPos.y) < 0) // posible collision
+            float penetration = relPos.y;
+            if (penetration <= 0) // posible collision
             {
-                if (std::fabsf(relPos.y) > 1.0f)
+                penetration = std::fabsf(penetration);
+                if (penetration > 1.0f)
                 {
                     continue;
-                }
-
-                XMVECTOR hitPosition = relPos_ + (XMVectorSet(0.0f, 1.0f, 0.0f, .0f) * std::fabsf(relPos.y));
-                XMVECTOR contactPoint_ = hitPosition;
+                } 
+                XMVECTOR contactPoint_ = relPos_ + (XMVectorSet(0.0f, 1.0f, 0.0f, .0f) * penetration);;
                 XMFLOAT3 contactPoint;
                 XMStoreFloat3(&contactPoint, contactPoint_);
-                if (contactPoint.x >= 0.0f && contactPoint.x <= width)
+                if (contactPoint.x >= 0 && contactPoint.x <= width)
                 {
                     XMVECTOR worldContactPoint = XMVector3Transform(contactPoint_, basisMatrix);
                     pos_ = worldContactPoint;
@@ -159,7 +132,6 @@ namespace mc
         XMStoreFloat3(&position, pos_);
         return position;
     }
-
     XMVECTOR Ship::GetOrientation() const
     {
         XMFLOAT3 x, y, z;

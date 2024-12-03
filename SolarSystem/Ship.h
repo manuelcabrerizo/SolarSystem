@@ -19,6 +19,7 @@ namespace mc
             unsigned int collisionDataCount);
         XMFLOAT3 GetPosition() const;
         XMVECTOR GetOrientation() const;
+        XMVECTOR GetForward() const { return forward_; }
         XMVECTOR GetFront() const { return front_; }
         XMVECTOR GetUp() const { return up_; }
         XMVECTOR GetRight() const { return right_; }
@@ -39,12 +40,14 @@ namespace mc
         XMVECTOR up_{};
         XMVECTOR front_{};
 
+        XMVECTOR forward_{};
+        XMVECTOR worldUp_{};
+
         float mass_{};
         float radio_{};
         float thrustMagnitude_{ 0.0f };
         float thrustMax_{ 400.0f };
 
-        float pitchVel_{};
         float yawVel_{};
         float rollVel_{};
     };
