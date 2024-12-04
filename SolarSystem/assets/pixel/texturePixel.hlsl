@@ -54,11 +54,8 @@ float3 CalcPointLight(float3 color, PointLight light, float3 normal, float3 view
 
 float4 fs_main(PS_Input i) : SV_TARGET
 {
-    float2 testUv = i.uv;
-    testUv.x *= 0.0f;
-
+    float4 textureColor = float4(i.uv, 0.0f, 1.0f);
     
-    float4 textureColor = srv.Sample(samplerState, testUv);
     float3 normal = normalize(i.nor);
     float3 viewDir = normalize(viewPos - i.fragPos);
     float3 result = float3(0.0f, 0.0f, 0.0f);

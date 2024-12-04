@@ -14,9 +14,16 @@ struct PS_Input
 
 };
 
+cbuffer Common : register(b3)
+{
+    float2 resolution;
+    float time;
+    float pad0;
+}
+
 float4 fs_main(PS_Input i) : SV_TARGET
 {
-    float2 uv = float2(i.uv.x, 1.0f - i.uv.y);
+    float2 uv = float2(i.uv.x, 1.0f - i.uv.y); 
     float4 textureColor = srv.Sample(samplerState, uv);
     return textureColor;
 }

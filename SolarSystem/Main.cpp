@@ -154,8 +154,8 @@ void SceneNode::Draw(const mc::GraphicsManager& gm, const Scene& scene)
     }
 }
 
-constexpr int windowWidth = 1280;
-constexpr int windowHeight = 720;
+constexpr int windowWidth = 1920;
+constexpr int windowHeight = 1080;
 
 float Lerp(float a, float b, float t)
 {
@@ -245,7 +245,7 @@ void Demo()
 
     // Create a sphere
     mc::MeshData sphereData;
-    mc::GeometryGenerator::GenerateSphere(1, 20, 20, sphereData);
+    mc::GeometryGenerator::GenerateSphere(1, 40, 40, sphereData);
     mc::VertexBuffer sphereVB(gm, sphereData.vertices.data(), sphereData.vertices.size(), sizeof(mc::Vertex));
     mc::IndexBuffer  sphereIB(gm, sphereData.indices.data(), sphereData.indices.size());
     mc::Mesh sphere(gm, &sphereVB, &IL, &sphereIB, sphereData.indices.size(), true);
@@ -309,17 +309,18 @@ void Demo()
     sun.SetTexture(&sunTexture);
     sun.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     sun.SetPixelShader((mc::PixelShader*)sm.Get("sun"));
-    sun.SetPosition(0, 1, 0);
+    sun.SetPosition(0, 4, 0);
     sun.SetScale(1, 1, 1);
 
     // Create the planet
-    SceneNode& planet = sun.AddNode();
+    SceneNode& planet = scene.AddNode();
     planet.SetMesh(&sphere);
     planet.SetTexture(&lavaTexture);
     planet.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     planet.SetPixelShader((mc::PixelShader*)sm.Get("texturePixel"));
-    planet.SetPosition(2, 1, 0);
-    planet.SetScale(1, 1, 1);
+    planet.SetPosition(0, -20.5, 0);
+    planet.SetScale(20, 20, 20);
+    planet.SetRotation(XMQuaternionRotationRollPitchYaw(XM_PI / 2, 0.0f, 0.0f));
 
     // Create the moon
     SceneNode& moon = planet.AddNode();
@@ -473,6 +474,7 @@ void Demo()
         
         // Draw to backBuffer
         {
+            gm.SetRasterizerStateCullBack();
             gm.BindBackBuffer();
             gm.Clear(0.3f, 0.1f, 0.1f);
             sm.Get("postProcess")->Bind(gm);

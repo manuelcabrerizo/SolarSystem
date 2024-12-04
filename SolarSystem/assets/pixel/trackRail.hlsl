@@ -59,18 +59,25 @@ float3 CalcPointLight(float3 color, PointLight light, float3 normal, float3 view
     return ambient + diffuse + specular;
 }
 
+float checkerboard(float2 tc)
+{
+    float tileScaleX = 12.0f;
+    float tileScaleY = 5.0f;
+    float tile = fmod(floor(tc.x * tileScaleX) + floor(tc.y * tileScaleY), 2.0);
+    return tile;
+}
+
+
 float4 fs_main(PS_Input i) : SV_TARGET
 {    
     float4 color0 = float4(0.6f, 0.6f, 1.0f, 0.5f);
     float4 color1 = float4(0.6f, 0.6f, 1.0f, 0.8f);
     
-    float x = i.uv.x;
-    float invX = 1.0f - x;
-    
-    x = lerp(x, invX, x);
-    
-    float trackBase = smoothstep(0.5f, 0.9f, cos(x * TAU * 2) * 0.5f + 0.5f);
-    float4 color = lerp(color0, color1, trackBase);
+    float2 uv = i.uv;
+ 
+//smoothstep(0.5f, 0.9f, cos(x * TAU * 2) * 0.5f + 0.5f);
+ 
+    float4 color = lerp(color0, color1, checkerboard(uv));
     
     return color;
     
@@ -84,4 +91,5 @@ float4 fs_main(PS_Input i) : SV_TARGET
     }
     
     return float4(result, color.a);
+
 }

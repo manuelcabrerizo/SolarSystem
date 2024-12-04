@@ -7,6 +7,12 @@ struct PS_Input
     float3 fragPos : TEXCOORD2;
 };
 
+cbuffer Common : register(b3)
+{
+    float2 resolution;
+    float time;
+    float pad0;
+}
 
 struct PointLight
 {
@@ -64,7 +70,7 @@ float4 fs_main(PS_Input i) : SV_TARGET
     float4 baseColor1 = float4(1.0f, 0.6f, 1.0f, 0.7f);
     
     float trackBorders = left + right;
-    float trackBase = smoothstep(0.5f, 0.9f, sin((i.uv.y + 0.3) * TAU * 50 + sin(i.uv.x * TAU * 4.0f)) * 0.5f + 0.5f);
+    float trackBase = smoothstep(0.01f, 2.0f, sin((i.uv.y + 0.3) * TAU * 25 + sin(i.uv.x * TAU * 4.0f + sin(i.uv.y * TAU * 20 + time * 3))) * 0.5f + 0.5f);
     float4 color = lerp(baseColor0, baseColor1, trackBase);
     color = lerp(color, borderColor, trackBorders);
     
