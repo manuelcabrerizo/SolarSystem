@@ -17,33 +17,6 @@ cbuffer Common : register(b3)
     float pad0;
 }
 
-float inverseLerp(float v, float minValue, float maxValue)
-{
-    return (v - minValue) / (maxValue - minValue);
-}
-
-float remap(float v, float inMin, float inMax, float outMin, float outMax)
-{
-    float t = inverseLerp(v, inMin, inMax);
-    return lerp(outMin, outMax, t);
-
-}
-
-float3 mod289(float3 x)
-{
-    return x - floor(x / 289.0f) * 289.0f;
-}
-
-float4 mod289(float4 x)
-{
-    return x - floor(x / 289.0f) * 289.0f;
-}
-
-float4 permute(float4 x)
-{
-    return mod289((x * 34.0 + 1.0) * x);
-}
-
 float3 hash3(float3 p)
 {
     p = float3(
@@ -51,22 +24,6 @@ float3 hash3(float3 p)
     dot(p, float3(269.5, 183.3, 246.1)),
     dot(p, float3(113.5, 271.9, 124.6)));
     return -1.0f + 2.0f * frac(sin(p) * 43758.5453123);
-}
-
-float noise(in float3 p)
-{
-    float3 i = floor(p);
-    float3 f = frac(p);
-    float3 u = f * f * (3.0 - 2.0 * f);
-
-    return lerp(lerp(lerp(dot(hash3(i + float3(0.0, 0.0, 0.0)), f - float3(0.0, 0.0, 0.0)),
-                          dot(hash3(i + float3(1.0, 0.0, 0.0)), f - float3(1.0, 0.0, 0.0)), u.x),
-                     lerp(dot(hash3(i + float3(0.0, 1.0, 0.0)), f - float3(0.0, 1.0, 0.0)),
-                          dot(hash3(i + float3(1.0, 1.0, 0.0)), f - float3(1.0, 1.0, 0.0)), u.x), u.y),
-                lerp(lerp(dot(hash3(i + float3(0.0, 0.0, 1.0)), f - float3(0.0, 0.0, 1.0)),
-                          dot(hash3(i + float3(1.0, 0.0, 1.0)), f - float3(1.0, 0.0, 1.0)), u.x),
-                     lerp(dot(hash3(i + float3(0.0, 1.0, 1.0)), f - float3(0.0, 1.0, 1.0)),
-                          dot(hash3(i + float3(1.0, 1.0, 1.0)), f - float3(1.0, 1.0, 1.0)), u.x), u.y), u.z);
 }
 
 float3 GenerateGridStar(float2 pixelCoords, float starRadius, float cellWidth, float seed)

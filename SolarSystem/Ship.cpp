@@ -41,8 +41,8 @@ namespace mc
     {
         rollVel_ = yawVel_*-0.25f;
         forward_ = XMVector3Rotate(forward_, XMQuaternionRotationAxis(worldUp_, yawVel_ * dt));
-        front_ = XMVector3Rotate(front_, XMQuaternionRotationAxis(worldUp_, yawVel_ * dt));
         XMVECTOR worldRight = XMVector3Cross(worldUp_, forward_);
+        front_ = XMVector3Rotate(front_, XMQuaternionRotationAxis(worldUp_, yawVel_ * dt));
         right_ = XMVector3Rotate(worldRight, XMQuaternionRotationAxis(forward_, rollVel_));
         up_ = XMVector3Normalize(XMVector3Cross(front_, right_));
 
@@ -54,7 +54,6 @@ namespace mc
         force += thrust_;
 
         acc_ = noseVel - vel_;
-
         acc_ = force / mass_;
 
         vel_ += acc_ * dt;
@@ -69,10 +68,9 @@ namespace mc
     void Ship::ProcessCollision(CollisionData* collisionData, float dt)
     {
         for (size_t i = 0; i < collisionData->quads.size(); i++)
-        {
-            // TODO: store the collision quad directly using XMVECTOR
+        { 
             const CollisionQuad& quad = collisionData->quads[i];
-
+            // TODO: store the collision quad directly using XMVECTOR
             XMVECTOR a = XMLoadFloat3(&quad.vertices[0]);
             XMVECTOR b = XMLoadFloat3(&quad.vertices[1]);
             XMVECTOR c = XMLoadFloat3(&quad.vertices[2]);

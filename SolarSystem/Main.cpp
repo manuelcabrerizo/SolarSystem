@@ -46,6 +46,8 @@ struct CommonConstBuffer
     XMFLOAT2 resolution;
     float time;
     float pad0;
+    XMFLOAT2 screenPos;
+    XMFLOAT2 flerActive;
 };
 
 class Scene;
@@ -85,6 +87,14 @@ public:
             parent = parent->parent_;
         }
         return position;
+    }
+
+    XMMATRIX GetModelMatrix()
+    {
+        XMMATRIX trans = XMMatrixTranslationFromVector(GetParentPosition() + position_);
+        XMMATRIX rot = XMMatrixRotationQuaternion(rotation_);
+        XMMATRIX scale = XMMatrixScalingFromVector(scale_);
+        return scale * rot * trans;
     }
 
     SceneNode& AddNode()
@@ -154,8 +164,8 @@ void SceneNode::Draw(const mc::GraphicsManager& gm, const Scene& scene)
     }
 }
 
-constexpr int windowWidth = 1920;
-constexpr int windowHeight = 1080;
+constexpr int windowWidth = 1280;
+constexpr int windowHeight = 720;
 
 float Lerp(float a, float b, float t)
 {
@@ -164,6 +174,8 @@ float Lerp(float a, float b, float t)
 
 void Demo()
 {
+    bool freeMode = false;
+
     // Camera variables
     float nearPlane = 0.01f;
     float farPlane = 100.0f;
@@ -244,12 +256,14 @@ void Demo()
     mc::InputLayout IL(gm, *(mc::VertexShader *)sm.Get("vert"), desc);
 
     // Create a sphere
+    /*
     mc::MeshData sphereData;
     mc::GeometryGenerator::GenerateSphere(1, 40, 40, sphereData);
     mc::VertexBuffer sphereVB(gm, sphereData.vertices.data(), sphereData.vertices.size(), sizeof(mc::Vertex));
     mc::IndexBuffer  sphereIB(gm, sphereData.indices.data(), sphereData.indices.size());
     mc::Mesh sphere(gm, &sphereVB, &IL, &sphereIB, sphereData.indices.size(), true);
-    
+    */
+
     // Create a quad
     mc::MeshData quadData;
     mc::GeometryGenerator::GenerateQuad(quadData);
@@ -279,7 +293,13 @@ void Demo()
     mc::GeometryGenerator::LoadOBJFile(shipData, "assets/mesh/ship.obj");
     mc::VertexBuffer shipDataVB(gm, shipData.vertices.data(), shipData.vertices.size(), sizeof(mc::Vertex));
     mc::Mesh shipMesh(gm, &shipDataVB, &IL, nullptr, shipData.vertices.size(), false);
-    
+
+    // Create planets
+    mc::MeshData planetData;
+    mc::GeometryGenerator::LoadOBJFile(planetData, "assets/mesh/planet.obj");
+    mc::VertexBuffer planetDataVB(gm, planetData.vertices.data(), planetData.vertices.size(), sizeof(mc::Vertex));
+    mc::Mesh planetMesh(gm, &planetDataVB, &IL, nullptr, planetData.vertices.size(), false);
+
     // Load collision data
     mc::CollisionData collisionDataOuter;
     mc::GeometryGenerator::LoadCollisionDataFromOBJFile(collisionDataOuter, "assets/mesh/track_outer_col.obj");
@@ -305,47 +325,22 @@ void Demo()
 
     // Create sun
     SceneNode& sun = scene.AddNode();
-    sun.SetMesh(&sphere);
+    sun.SetMesh(&planetMesh);
     sun.SetTexture(&sunTexture);
     sun.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     sun.SetPixelShader((mc::PixelShader*)sm.Get("sun"));
-    sun.SetPosition(0, 4, 0);
-    sun.SetScale(1, 1, 1);
+    sun.SetPosition(0, 0, 40);
+    sun.SetScale(10, 10, 10);
 
     // Create the planet
     SceneNode& planet = scene.AddNode();
-    planet.SetMesh(&sphere);
+    planet.SetMesh(&planetMesh);
     planet.SetTexture(&lavaTexture);
     planet.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     planet.SetPixelShader((mc::PixelShader*)sm.Get("texturePixel"));
     planet.SetPosition(0, -20.5, 0);
     planet.SetScale(20, 20, 20);
-    planet.SetRotation(XMQuaternionRotationRollPitchYaw(XM_PI / 2, 0.0f, 0.0f));
 
-    // Create the moon
-    SceneNode& moon = planet.AddNode();
-    moon.SetMesh(&sphere);
-    moon.SetTexture(&moonTexture);
-    moon.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
-    moon.SetPixelShader((mc::PixelShader*)sm.Get("texturePixel"));
-    moon.SetPosition(0, 1, 2);
-    moon.SetScale(1, 1, 1);
-
-    SceneNode& jupiter = sun.AddNode();
-    jupiter.SetMesh(&sphere);
-    jupiter.SetTexture(&planet1Texture);
-    jupiter.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
-    jupiter.SetPixelShader((mc::PixelShader*)sm.Get("texturePixel"));
-    jupiter.SetPosition(4, 1, 0);
-    jupiter.SetScale(1, 1, 1);
-
-    SceneNode& saturn = sun.AddNode();
-    saturn.SetMesh(&sphere);
-    saturn.SetTexture(&planet2Texture);
-    saturn.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
-    saturn.SetPixelShader((mc::PixelShader*)sm.Get("texturePixel"));
-    saturn.SetPosition(6, 1, 0);
-    saturn.SetScale(1, 1, 1);
 
     //////////////////////////////////////
     // Add translucid objects
@@ -391,14 +386,16 @@ void Demo()
 
     while (engine.IsRunning())
     {
+        if (im.KeyJustDown(mc::KEY_1))
+        {
+            freeMode = !freeMode;
+        }
+
         LARGE_INTEGER currentCounter;
         QueryPerformanceCounter(&currentCounter);
         double lastTime = (double)lastCounter.QuadPart / frequency.QuadPart;
         double currentTime = (double)currentCounter.QuadPart / frequency.QuadPart;
         float dt = static_cast<float>(currentTime - lastTime);
-
-        commonCPUBuffer.time += dt;
-        commonGPUBuffer.Update(gm, commonCPUBuffer);
 
         sm.HotReaload(gm);
 
@@ -407,14 +404,23 @@ void Demo()
             &collisionDataInner
         };
 
-        shipBody.Update(im, dt, collisionDataArray, 2);
+        if (freeMode == false)
+        {
+            shipBody.Update(im, dt, collisionDataArray, 2);
+        }
         ship.SetRotation(shipBody.GetOrientation());
           
         XMFLOAT3 shipPos = shipBody.GetPosition();
         ship.SetPosition(shipPos.x, shipPos.y, shipPos.z);
 
-        //camera.Update(im, dt);
-        camera.FollowShip(shipBody);
+        if (freeMode)
+        {
+            camera.Update(im, dt);
+        }
+        else
+        {
+            camera.FollowShip(shipBody);
+        }
 
         lightCPUBuffer.viewPos = camera.GetPosition();
         lightGPUBuffer.Update(gm, lightCPUBuffer);
@@ -441,6 +447,40 @@ void Demo()
         cameraCPUBuffer.proj = XMMatrixPerspectiveFovLH(fov, aspectRation, nearPlane, farPlane);
         cameraCPUBuffer.viewPos = camera.GetPosition();
         cameraGPUBuffer.Update(gm, cameraCPUBuffer);
+
+        
+        XMVECTOR sunWorld = XMVector4Transform(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), sun.GetModelMatrix());
+        XMVECTOR sunView = XMVector4Transform(sunWorld, cameraCPUBuffer.view);
+        XMVECTOR sunScreen = XMVector4Transform(sunView, cameraCPUBuffer.proj);
+        XMFLOAT4 screenPos;
+        XMStoreFloat4(&screenPos, sunScreen);
+        if (screenPos.x >= -screenPos.w && screenPos.x <= screenPos.w &&
+            screenPos.y >= -screenPos.w && screenPos.y <= screenPos.w &&
+            screenPos.z >= -screenPos.w && screenPos.z <= screenPos.w)
+        {
+            float hWindowWidth = windowWidth * 0.5f;
+            float hWindowHeight = windowHeight * 0.5f;
+            screenPos.x /= screenPos.w;
+            screenPos.y /= screenPos.w;
+            screenPos.x *= hWindowWidth;
+            screenPos.y *= hWindowHeight;
+            screenPos.x += hWindowWidth;
+            screenPos.y += hWindowHeight;
+            //std::cout << "X: " << screenPos.x << " Y: " << screenPos.y << "\n";
+            commonCPUBuffer.screenPos = XMFLOAT2(screenPos.x, screenPos.y);
+            commonCPUBuffer.flerActive.x = 1.0f;
+        }
+        else
+        {
+            commonCPUBuffer.flerActive.x = 0.0f;
+        }
+
+
+
+        commonCPUBuffer.time += dt;
+        commonGPUBuffer.Update(gm, commonCPUBuffer);
+
+
 
         frameBuffer.Bind(gm);
         frameBuffer.Clear(gm, 0.1f, 0.1f, 0.3f);
