@@ -152,6 +152,10 @@
     <None Include="assets\vertex\vert.hlsl" />
     <None Include="assets\pixel\trackRail.hlsl" />
     <None Include="assets\pixel\ship.hlsl" />
+    <None Include="assets\pixel\bloomSelector.hlsl" />
+    <None Include="assets\pixel\bloom.hlsl" />
+    <None Include="assets\pixel\meta.hlsl" />
+    <None Include="assets\pixel\postes.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="assets\textures\Lava.png">
@@ -176,6 +180,9 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="assets\textures\sun.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="assets\textures\colors.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

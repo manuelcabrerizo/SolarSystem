@@ -164,12 +164,24 @@ void SceneNode::Draw(const mc::GraphicsManager& gm, const Scene& scene)
     }
 }
 
-constexpr int windowWidth = 1280;
-constexpr int windowHeight = 720;
+constexpr int windowWidth = 1366;
+constexpr int windowHeight = 768;
 
 float Lerp(float a, float b, float t)
 {
-    return a + (b - a) * t;
+    return (1.0f - t) * a + b * t;
+}
+
+float InverseLerp(float a, float b, float v)
+{
+    return (v - a) / (b - a);
+}
+
+float Remap(float v, float inMin, float inMax, float outMin, float outMax)
+{
+    float t = InverseLerp(inMin, inMax, v);
+    return Lerp(outMin, outMax, t);
+
 }
 
 void Demo()
@@ -187,7 +199,7 @@ void Demo()
     LARGE_INTEGER frequency;
     QueryPerformanceFrequency(&frequency);
 
-    mc::Engine engine("Solar System", windowWidth, windowHeight);
+    mc::Engine engine("Solar System Racing", windowWidth, windowHeight);
     mc::GraphicsManager& gm = engine.GetGraphicsManager();
     mc::InputManager& im = engine.GetInputManager();
     mc::ShaderManager& sm = engine.GetShaderManager();
@@ -204,15 +216,14 @@ void Demo()
     sm.AddPixelShader("trackBase", gm, "assets/pixel/trackBase.hlsl");
     sm.AddPixelShader("trackRail", gm, "assets/pixel/trackRail.hlsl");
     sm.AddPixelShader("ship", gm, "assets/pixel/ship.hlsl");
+    sm.AddPixelShader("meta", gm, "assets/pixel/meta.hlsl");
+    sm.AddPixelShader("postes", gm, "assets/pixel/postes.hlsl");
+    sm.AddPixelShader("bloomSelector", gm, "assets/pixel/bloomSelector.hlsl");
+    sm.AddPixelShader("bloom", gm, "assets/pixel/bloom.hlsl");
+
 
 
     // Load textures
-    mc::Texture lavaTexture(gm, "assets/textures/Lava.png");
-    mc::Texture skyTexture(gm, "assets/textures/sky3.png");
-    mc::Texture moonTexture(gm, "assets/textures/moon.png");
-    mc::Texture planet1Texture(gm, "assets/textures/planet.png");
-    mc::Texture planet2Texture(gm, "assets/textures/planet2.png");
-    mc::Texture sunTexture(gm, "assets/textures/sun.png");
     mc::Texture shipTexture(gm, "assets/textures/Overtone_Default_Diffuse.png");
 
     // Init a Const Buffer
@@ -228,13 +239,13 @@ void Demo()
 
     LightConstBuffer lightCPUBuffer{};
     lightCPUBuffer.count = 1;
-    lightCPUBuffer.lights[0].position = XMFLOAT3(0, 1, 0);
+    lightCPUBuffer.lights[0].position = XMFLOAT3(0, 10, 10);
     lightCPUBuffer.lights[0].constant = 1.0f;
     lightCPUBuffer.lights[0].linear = 0.0014f;
     lightCPUBuffer.lights[0].quadratic = 0.000007;
-    lightCPUBuffer.lights[0].ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
-    lightCPUBuffer.lights[0].diffuse = XMFLOAT3(1.5f, 1.5f, 1.5f);
-    lightCPUBuffer.lights[0].specular = XMFLOAT3(2.0f, 2.0f,2.0f);
+    lightCPUBuffer.lights[0].ambient = XMFLOAT3(0.025f, 0.025f, 0.025f);
+    lightCPUBuffer.lights[0].diffuse = XMFLOAT3(100.5f, 100.5f, 100.5f);
+    lightCPUBuffer.lights[0].specular = XMFLOAT3(140.0f, 140.0f,140.0f);
     lightCPUBuffer.viewPos = camera.GetPosition();
     mc::ConstBuffer<LightConstBuffer> lightGPUBuffer(gm, mc::ConstBufferBind::Pixel, lightCPUBuffer, 2);
 
@@ -254,15 +265,6 @@ void Demo()
         4
     };
     mc::InputLayout IL(gm, *(mc::VertexShader *)sm.Get("vert"), desc);
-
-    // Create a sphere
-    /*
-    mc::MeshData sphereData;
-    mc::GeometryGenerator::GenerateSphere(1, 40, 40, sphereData);
-    mc::VertexBuffer sphereVB(gm, sphereData.vertices.data(), sphereData.vertices.size(), sizeof(mc::Vertex));
-    mc::IndexBuffer  sphereIB(gm, sphereData.indices.data(), sphereData.indices.size());
-    mc::Mesh sphere(gm, &sphereVB, &IL, &sphereIB, sphereData.indices.size(), true);
-    */
 
     // Create a quad
     mc::MeshData quadData;
@@ -300,13 +302,30 @@ void Demo()
     mc::VertexBuffer planetDataVB(gm, planetData.vertices.data(), planetData.vertices.size(), sizeof(mc::Vertex));
     mc::Mesh planetMesh(gm, &planetDataVB, &IL, nullptr, planetData.vertices.size(), false);
 
+    // Create meta
+    mc::MeshData metaData;
+    mc::GeometryGenerator::LoadOBJFile(metaData, "assets/mesh/meta.obj");
+    mc::VertexBuffer metaDataVB(gm, metaData.vertices.data(), metaData.vertices.size(), sizeof(mc::Vertex));
+    mc::Mesh metaMesh(gm, &metaDataVB, &IL, nullptr, metaData.vertices.size(), false);
+
+    // Create postes
+    mc::MeshData postesData;
+    mc::GeometryGenerator::LoadOBJFile(postesData, "assets/mesh/postes.obj");
+    mc::VertexBuffer postesDataVB(gm, postesData.vertices.data(), postesData.vertices.size(), sizeof(mc::Vertex));
+    mc::Mesh postesMesh(gm, &postesDataVB, &IL, nullptr, postesData.vertices.size(), false);
+
+
     // Load collision data
     mc::CollisionData collisionDataOuter;
     mc::GeometryGenerator::LoadCollisionDataFromOBJFile(collisionDataOuter, "assets/mesh/track_outer_col.obj");
     mc::CollisionData collisionDataInner;
     mc::GeometryGenerator::LoadCollisionDataFromOBJFile(collisionDataInner, "assets/mesh/track_inner_col.obj");
 
-    mc::FrameBuffer frameBuffer(gm, 0, 0, windowWidth, windowHeight);
+    mc::FrameBuffer frameBuffer(gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
+    mc::FrameBuffer bloom0Buffer(gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
+    mc::FrameBuffer bloom1Buffer(gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
+
+
 
     XMFLOAT3 position = XMFLOAT3(-2.5, 0.0125f, 0);
     mc::Ship shipBody(position, 2.0f, 0.04f);
@@ -323,19 +342,33 @@ void Demo()
     ship.SetPosition(position.x, position.y, position.z);
     ship.SetScale(0.0125f*0.5f, 0.0125f*0.5f, 0.0125f*0.5f);
 
+    // Create meta
+    SceneNode& meta = scene.AddNode();
+    meta.SetMesh(&metaMesh);
+    meta.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
+    meta.SetPixelShader((mc::PixelShader*)sm.Get("meta"));
+    meta.SetPosition(0, 0, 0);
+    meta.SetScale(1.0f, 1.0f, 1.0f);
+
+    // Create postes
+    SceneNode& postes = scene.AddNode();
+    postes.SetMesh(&postesMesh);
+    postes.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
+    postes.SetPixelShader((mc::PixelShader*)sm.Get("postes"));
+    postes.SetPosition(0, 0, 0);
+    postes.SetScale(1.0f, 1.0f, 1.0f);
+
     // Create sun
     SceneNode& sun = scene.AddNode();
     sun.SetMesh(&planetMesh);
-    sun.SetTexture(&sunTexture);
     sun.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     sun.SetPixelShader((mc::PixelShader*)sm.Get("sun"));
-    sun.SetPosition(0, 0, 40);
+    sun.SetPosition(0, 10, 40);
     sun.SetScale(10, 10, 10);
 
     // Create the planet
     SceneNode& planet = scene.AddNode();
     planet.SetMesh(&planetMesh);
-    planet.SetTexture(&lavaTexture);
     planet.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     planet.SetPixelShader((mc::PixelShader*)sm.Get("texturePixel"));
     planet.SetPosition(0, -20.5, 0);
@@ -348,7 +381,6 @@ void Demo()
     // Create track base
     SceneNode& trackBase = scene.AddNode();
     trackBase.SetMesh(&trackBaseMesh);
-    trackBase.SetTexture(&planet2Texture);
     trackBase.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     trackBase.SetPixelShader((mc::PixelShader*)sm.Get("trackBase"));
     trackBase.SetPosition(0, 0, 0);
@@ -357,7 +389,6 @@ void Demo()
     // Create track inner
     SceneNode& trackInner = scene.AddNode();
     trackInner.SetMesh(&trackInnerMesh);
-    trackInner.SetTexture(&planet1Texture);
     trackInner.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     trackInner.SetPixelShader((mc::PixelShader*)sm.Get("trackRail"));
     trackInner.SetPosition(0, 0, 0);
@@ -366,7 +397,6 @@ void Demo()
     // Create track inner
     SceneNode& trackOuter = scene.AddNode();
     trackOuter.SetMesh(&trackOuterMesh);
-    trackOuter.SetTexture(&planet1Texture);
     trackOuter.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     trackOuter.SetPixelShader((mc::PixelShader*)sm.Get("trackRail"));
     trackOuter.SetPosition(0, 0, 0);
@@ -384,6 +414,10 @@ void Demo()
     LARGE_INTEGER lastCounter;
     QueryPerformanceCounter(&lastCounter); 
 
+    float time = 0.0f;
+
+    int frameCount = 0.0f;
+
     while (engine.IsRunning())
     {
         if (im.KeyJustDown(mc::KEY_1))
@@ -396,6 +430,17 @@ void Demo()
         double lastTime = (double)lastCounter.QuadPart / frequency.QuadPart;
         double currentTime = (double)currentCounter.QuadPart / frequency.QuadPart;
         float dt = static_cast<float>(currentTime - lastTime);
+
+        
+        if (time >= 1.0f)
+        {
+            std::cout << "FPS: " << frameCount << "\n";
+            frameCount = 0;
+            time = 0;
+        }
+        time += dt;
+        frameCount++;
+        
 
         sm.HotReaload(gm);
 
@@ -422,21 +467,12 @@ void Demo()
             camera.FollowShip(shipBody);
         }
 
+        XMFLOAT3 sunPosition;
+        XMStoreFloat3(&sunPosition, sun.GetPosition());
+        lightCPUBuffer.lights[0].position = sunPosition;
         lightCPUBuffer.viewPos = camera.GetPosition();
         lightGPUBuffer.Update(gm, lightCPUBuffer);
 
-        // Update planets position and rotation
-        /*
-        sun.SerRotation(XMQuaternionRotationRollPitchYaw(0, -time*0.1f, 0));
-        planet.SetPosition(100.0f * std::cosf(time*0.2f + 10), 0.0f, 100.0f * std::sinf(time*0.2f + 10));
-        planet.SerRotation(XMQuaternionRotationRollPitchYaw(0, -time*2.0f, 0));
-        moon.SetPosition(6.0f * std::cosf(time), 0.0f, 6.0f * std::sinf(time));
-        moon.SerRotation(XMQuaternionRotationRollPitchYaw(0, -time * 3.0f, 0));
-        jupiter.SetPosition(300.0f * std::cosf(time*0.05f + 300), 0.0f, 300.0f * std::sinf(time*0.05f + 300.0f));
-        jupiter.SerRotation(XMQuaternionRotationRollPitchYaw(0, -time, 0));
-        saturn.SetPosition(150.0f * std::cosf(time * 0.1f + 50), 0.0f, 150.0f * std::sinf(time * 0.1f + 50.0f));
-        saturn.SerRotation(XMQuaternionRotationRollPitchYaw(0, -time * 0.5f, 0));
-        */
         gm.SetRasterizerStateCullNone();
 
         float shipVel = XMVectorGetX(XMVector3Length(shipBody.GetVelocity()));
@@ -466,24 +502,29 @@ void Demo()
             screenPos.y *= hWindowHeight;
             screenPos.x += hWindowWidth;
             screenPos.y += hWindowHeight;
-            //std::cout << "X: " << screenPos.x << " Y: " << screenPos.y << "\n";
+
+            float nx = screenPos.x / windowWidth;
+            float x0 = std::clamp(Remap(nx, 0.0f, 0.2f, 0.0f, 1.0f), 0.0f, 1.0f);
+            float x1 = std::clamp(Remap(1.0f - nx, 0.0f, 0.2f, 0.0f, 1.0f), 0.0f, 1.0f);
+            float x = x0 * x1;
+            float ny = screenPos.y / windowHeight;
+            float y0 = std::clamp(Remap(ny, 0.0f, 0.1f, 0.0f, 1.0f), 0.0f, 1.0f);
+            float y1 = std::clamp(Remap(1.0f - ny, 0.0f, 0.1f, 0.0f, 1.0f), 0.0f, 1.0f);
+            float y = y0 * y1;
             commonCPUBuffer.screenPos = XMFLOAT2(screenPos.x, screenPos.y);
-            commonCPUBuffer.flerActive.x = 1.0f;
+            commonCPUBuffer.flerActive.x = x*y;
         }
         else
         {
             commonCPUBuffer.flerActive.x = 0.0f;
         }
 
-
-
         commonCPUBuffer.time += dt;
         commonGPUBuffer.Update(gm, commonCPUBuffer);
 
-
-
         frameBuffer.Bind(gm);
         frameBuffer.Clear(gm, 0.1f, 0.1f, 0.3f);
+        
         // Draw sky
         {
             // Compute the sky coord system so is always facing the camera
@@ -503,29 +544,72 @@ void Demo()
 
             sm.Get("skybox")->Bind(gm);
             gm.SetDepthStencilOff();
-
-            skyTexture.Bind(gm, 0);
             quad.Draw(gm);
-            skyTexture.Unbind(gm, 0);
         }
+        
+        
         
         gm.SetDepthStencilOn();
         scene.Draw(gm);
-        
-        // Draw to backBuffer
+
+        gm.SetRasterizerStateCullBack();
+        objectCPUBuffer.model = XMMatrixScaling(static_cast<float>(windowWidth), static_cast<float>(windowHeight), 1.0f);
+        cameraCPUBuffer.view = XMMatrixIdentity();
+        cameraCPUBuffer.proj = XMMatrixOrthographicLH(windowWidth, windowHeight, 0, 100);
+        objectGPUBuffer.Update(gm, objectCPUBuffer);
+        cameraGPUBuffer.Update(gm, cameraCPUBuffer);
+
+        // Draw to bloom selector buffer
         {
-            gm.SetRasterizerStateCullBack();
-            gm.BindBackBuffer();
-            gm.Clear(0.3f, 0.1f, 0.1f);
-            sm.Get("postProcess")->Bind(gm);
-            objectCPUBuffer.model = XMMatrixScaling(static_cast<float>(windowWidth), static_cast<float>(windowHeight), 1.0f);
-            cameraCPUBuffer.view = XMMatrixIdentity();
-            cameraCPUBuffer.proj = XMMatrixOrthographicLH(windowWidth, windowHeight, 0, 100);
-            objectGPUBuffer.Update(gm, objectCPUBuffer);
-            cameraGPUBuffer.Update(gm, cameraCPUBuffer);
+            bloom0Buffer.Bind(gm);
+            bloom0Buffer.Clear(gm, 0.0f, 0.0f, 0.0f);
+            sm.Get("bloomSelector")->Bind(gm);
             frameBuffer.BindAsTexture(gm, 0);
             quad.Draw(gm);
             frameBuffer.UnbindAsTexture(gm, 0);
+        }
+
+        // Bloom
+        for (int i = 0; i < 5; i++)
+        {
+            // make horizontal the bloom
+            {
+                commonCPUBuffer.pad0 = 1.0f;
+                commonGPUBuffer.Update(gm, commonCPUBuffer);
+
+                bloom1Buffer.Bind(gm);
+                bloom1Buffer.Clear(gm, 0.0f, 0.0f, 0.0f);
+                sm.Get("bloom")->Bind(gm);
+                bloom0Buffer.BindAsTexture(gm, 0);
+                quad.Draw(gm);
+                bloom0Buffer.UnbindAsTexture(gm, 0);
+            }
+            // make vertical the bloom
+            {
+                commonCPUBuffer.pad0 = 0.0f;
+                commonGPUBuffer.Update(gm, commonCPUBuffer);
+
+                bloom0Buffer.Bind(gm);
+                bloom0Buffer.Clear(gm, 0.0f, 0.0f, 0.0f);
+                sm.Get("bloom")->Bind(gm);
+                bloom1Buffer.BindAsTexture(gm, 0);
+                quad.Draw(gm);
+                bloom1Buffer.UnbindAsTexture(gm, 0);
+            }
+        }
+
+        
+        // Draw to backBuffer
+        {
+            gm.BindBackBuffer();
+            gm.Clear(0.3f, 0.1f, 0.1f);
+            sm.Get("postProcess")->Bind(gm);
+            frameBuffer.BindAsTexture(gm, 0);
+            bloom0Buffer.BindAsTexture(gm, 1);
+            quad.Draw(gm);
+            bloom0Buffer.UnbindAsTexture(gm, 1);
+            frameBuffer.UnbindAsTexture(gm, 0);
+
         }
 
         gm.Present();

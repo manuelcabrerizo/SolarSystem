@@ -24,6 +24,9 @@ namespace mc
         XMVECTOR GetUp() const { return up_; }
         XMVECTOR GetRight() const { return right_; }
         XMVECTOR GetVelocity() const { return vel_; }
+        float GetThrust() const { return thrustMagnitude_; }
+        float GetThrustMax() const { return thrustMax_; }
+
     private:
         void ProcessInput(const InputManager& im, float dt);
         void ProcessVelocities(float dt);
@@ -46,7 +49,7 @@ namespace mc
         float mass_{};
         float radio_{};
         float thrustMagnitude_{ 0.0f };
-        float thrustMax_{ 400.0f };
+        float thrustMax_{ 6.4f };
 
         float yawVel_{};
         float rollVel_{};

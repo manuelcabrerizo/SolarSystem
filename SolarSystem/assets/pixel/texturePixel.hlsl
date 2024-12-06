@@ -33,19 +33,16 @@ float3 CalcPointLight(float3 color, PointLight light, float3 normal, float3 view
     float diff = max(dot(normal, lightDir), 0.0f);
 
     float3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0f), 128);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0f), 32);
 
     float dist = length(light.position_ - fragPos);
-    float constant = 0.5f;
-    float linear_ = 1.0f;
-    float quadratic = 0.8f;
-    float attenuation = 1.0f / (constant + linear_ * dist + quadratic * (dist * dist));
+    float attenuation = 1.0f / dist; //1.0f / (light.constant_ + light.linear_ * dist + light.quadratic_ * (dist * dist));
 
-    float3 ambient = float3(0.5, 0.5, 0.5) * color;
+    float3 ambient = light.ambient_ * color;
     float3 diffuse = light.diffuse_ * diff * color;
     float3 specular = light.specular_ * spec * color;
 
-    ambient *= attenuation;
+    //ambient *= attenuation;
     diffuse *= attenuation;
     specular *= attenuation;
 
@@ -182,41 +179,28 @@ float4 fs_main(PS_Input i) : SV_TARGET
                      float3(1.0f, 1.0f, 1.0f), smoothstep(0.18, 0.25, noiseSample));
     color = lerp(waterColor, landColor, smoothstep(0.05, 0.06, noiseSample));
 
-
-    float3 lightDir = normalize(float3(0.0, -1.0, 0.0));
-    float3 surfacePosition = wsPosition + wsNormal * noiseSample * 0.1;
     
-    float dp = max(0.0, dot(lightDir, wsNormal));
-    
-    float3 lightColor = float3(0.75, 0.75, 0.75);
-    float3 ambient = float3(0.002, 0.002, 0.002);
-    float3 diffuse = lightColor * dp;
-    float3 r = normalize(reflect(-wsViewDir, wsNormal));
-    float phongValue = max(0.0, dot(wsViewDir, r));
-    phongValue = pow(phongValue, 4.0);
-    float3 specular = float3(phongValue, phongValue, phongValue) * 0.5f * diffuse;
-    
-    float3 planetShading = color * (diffuse + ambient) + specular;
-    color = planetShading;
-    
-    float3 normal = normalize(i.nor);
-    float3 viewDir = normalize(viewPos - i.fragPos);
-    float3 fresnel = smoothstep(1.0f, 0.01f, dot(viewDir, normal));
-    fresnel = pow(fresnel, 8.0);
-    
-    color = lerp(color, float3(0.0, 0.5, 1.0), fresnel);
-
-    
-    /*
     float3 normal = normalize(i.nor);
     float3 viewDir = normalize(viewPos - i.fragPos);
     float3 result = float3(0.0f, 0.0f, 0.0f);
     for (int index = 0; index < lightCount; index++)
     {
         PointLight light = lights[0];
-        result += CalcPointLight(color, light, wsNormal, viewDir, i.fragPos);
+        result += CalcPointLight(color, light, normal, viewDir, i.fragPos);
     }
-    */
+    
+    color = result;
+    
+    float3 fresnel = smoothstep(1.0f, 0.01f, dot(viewDir, normal));
+    fresnel = pow(fresnel, 8.0);
+    
+    color = lerp(color, float3(0.0, 0.5, 1.0)*2.0f, fresnel);
+
+    
+    
+
+
+    
  
    
     return float4(color, 1.0f);

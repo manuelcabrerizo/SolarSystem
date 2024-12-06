@@ -14,6 +14,18 @@ namespace mc
         CreateDepthStencilView(gm);
     }
 
+    FrameBuffer::FrameBuffer(const GraphicsManager& gm,
+        unsigned int x, unsigned int y,
+        unsigned int w, unsigned int h,
+        DXGI_FORMAT format)
+        : x_(x), y_(y), w_(w), h_(h), format_(format)
+    {
+        CreateTexture(gm);
+        CreateRenderTargetView(gm);
+        CreateShaderResourceView(gm);
+        CreateDepthStencilView(gm);
+    }
+
     void FrameBuffer::Bind(const GraphicsManager& gm)
     {
         GetDeviceContext(gm)->OMSetRenderTargets(1, renderTargetView_.GetAddressOf(), depthStencilView_.Get());

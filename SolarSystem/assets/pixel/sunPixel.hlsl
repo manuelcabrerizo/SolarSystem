@@ -183,14 +183,14 @@ float4 fs_main(PS_Input i) : SV_TARGET
     float e = ridgedMF(st, 6);
     e *= e * e*e;
     float3 color = lerp(float3(0.5, 0.2, 0.1),
-                        float3(1.0f, 1.0f, 0.2f), e) * 2.0f;
+                        float3(1.0f, 1.0f, 0.2f), e) * 3.0f;
     
     float3 normal = normalize(i.nor);
     float3 viewDir = normalize(viewPos - i.fragPos);
-    float3 fresnel = smoothstep(2.0f, 0.05f, dot(viewDir, normal));
-    fresnel = pow(fresnel, 8.0);
+    float3 fresnel = smoothstep(1.0f, 0.01f, dot(viewDir, normal));
+    fresnel = pow(fresnel, 7.0);
     
-    color = lerp(color, float3(1.0, 0.2, 0.0), fresnel);
+    color = lerp(color, float3(100.0, 1.0, 0.0), fresnel);
     
     return float4(color, 1.0f);
 }

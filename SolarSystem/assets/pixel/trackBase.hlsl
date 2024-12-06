@@ -46,13 +46,13 @@ float3 CalcPointLight(float3 color, PointLight light, float3 normal, float3 view
     float spec = pow(max(dot(viewDir, reflectDir), 0.0f), 32);
 
     float dist = length(light.position_ - fragPos);
-    float attenuation = 1.0f / (light.constant_ + light.linear_ * dist + light.quadratic_ * (dist * dist));
+    float attenuation = 1.0f / dist;//(light.constant_ + light.linear_ * dist + light.quadratic_ * (dist * dist));
 
     float3 ambient = light.ambient_ * color;
     float3 diffuse = light.diffuse_ * diff * color;
     float3 specular = light.specular_ * spec * color;
 
-    ambient *= attenuation;
+    //ambient *= attenuation;
     diffuse *= attenuation;
     specular *= attenuation;
 
@@ -62,10 +62,10 @@ float3 CalcPointLight(float3 color, PointLight light, float3 normal, float3 view
 float4 fs_main(PS_Input i) : SV_TARGET
 {
     float e = i.uv.y;
-    float right = step(e, 0.1f);
-    float left = step(1.0f - e, 0.1f);
+    float right = step(e, 0.025f);
+    float left = step(1.0f - e, 0.025f);
     
-    float4 borderColor = float4(0.8f, 0.8f, 1.0f, 1.0f);
+    float4 borderColor = float4(0.5f, 4.0f, 4.0f, 1.0f);
     float4 baseColor0 = float4(1.0f, 0.6f, 1.0f, 0.4f);
     float4 baseColor1 = float4(1.0f, 0.6f, 1.0f, 0.7f);
     

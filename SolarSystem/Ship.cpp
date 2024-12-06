@@ -29,24 +29,24 @@ namespace mc
         }
         if (im.KeyDown(mc::KEY_W))
         {
-            thrustMagnitude_ = std::min(thrustMagnitude_ + (100.0f * dt), thrustMax_);
+            thrustMagnitude_ = std::min(thrustMagnitude_ + (100.0f*0.016f*dt), thrustMax_);
         }
         else
         {
-            thrustMagnitude_ = std::max(thrustMagnitude_ - (200.0f * dt), 0.0f);
+            thrustMagnitude_ = std::max(thrustMagnitude_ - (200.0f*0.016f*dt), 0.0f);
         }
     }
 
     void Ship::ProcessVelocities(float dt)
     {
         rollVel_ = yawVel_*-0.25f;
-        forward_ = XMVector3Rotate(forward_, XMQuaternionRotationAxis(worldUp_, yawVel_ * dt));
+        forward_ = XMVector3Normalize(XMVector3Rotate(forward_, XMQuaternionRotationAxis(worldUp_, yawVel_ * dt)));
         XMVECTOR worldRight = XMVector3Cross(worldUp_, forward_);
         front_ = XMVector3Rotate(front_, XMQuaternionRotationAxis(worldUp_, yawVel_ * dt));
         right_ = XMVector3Rotate(worldRight, XMQuaternionRotationAxis(forward_, rollVel_));
         up_ = XMVector3Normalize(XMVector3Cross(front_, right_));
 
-        thrust_ = forward_ * (thrustMagnitude_ * dt);
+        thrust_ = forward_ * thrustMagnitude_;
 
         XMVECTOR noseVel = forward_ * XMVector3Length(vel_);
 
@@ -104,7 +104,7 @@ namespace mc
                 if (contactPoint.x >= 0 && contactPoint.x <= width)
                 {
                     XMVECTOR worldContactPoint = XMVector3Transform(contactPoint_, basisMatrix);
-                    pos_ = worldContactPoint;
+                    pos_ = worldContactPoint + n * 0.001f;
                     vel_ = vel_ - n * XMVector3Dot(vel_, n);
                 }
             }

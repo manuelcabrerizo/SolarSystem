@@ -1,4 +1,5 @@
 Texture2D srv : register(t0);
+Texture2D bloom : register(t1);
 SamplerState samplerState : register(s0);
 
 #define PI 3.14159265359
@@ -46,7 +47,6 @@ float random(in float2 st)
 {
     return frac(sin(dot(st.xy, float2(12.9898, 78.233))) * 43758.5453123);
 }
-
 float noise(in float2 st)
 {
     float2 i = floor(st);
@@ -64,7 +64,6 @@ float noise(in float2 st)
             (c - a) * u.y * (1.0 - u.x) +
             (d - b) * u.x * u.y;
 }
-
 float3 lensflare(float2 uv, float2 pos)
 {
     float2 main = uv - pos;
@@ -110,30 +109,35 @@ float3 lensflare(float2 uv, float2 pos)
 
     return c;
 }
-
 float3 cc(float3 color, float factor, float factor2) // color modifier
 {
     float w = color.x + color.y + color.z;
     return lerp(color, float3(w,w,w) * factor, w * factor2);
 }
 
-
 float4 fs_main(PS_Input i) : SV_TARGET
-{    
-    float3 tint = float3(1.4, 1.2, 1.0);
+{
+    const float exposure = 1.0f;
+    const float gamma = 2.2;
+    float3 hdrColor = pow(abs(srv.Sample(samplerState, float2(i.uv.x, 1.0f - i.uv.y)).rgb), float3(gamma, gamma, gamma));
+    float3 bloomColor = bloom.Sample(samplerState, float2(i.uv.x, 1.0f - i.uv.y)).rgb;
+    hdrColor += bloomColor;
+    // Tone mapping
+    float3 mapped = float3(1.0, 1.0, 1.0) - exp(-hdrColor * exposure);
+    //float3 mapped = hdrColor / (hdrColor + float3(1.0, 1.0, 1.0));
+    // gamma correction
+    float invGamma = 1.0f / gamma;
+    mapped = pow(abs(mapped), float3(invGamma, invGamma, invGamma));
     
+
+    float3 tint = float3(2.8, 2.4, 2.0);
     float2 uv = i.uv - 0.5f;
     uv.x *= resolution.x / resolution.y;
-    
     float2 sPos = (screenPos / resolution.xy) - float2(0.5, 0.5);
     sPos.x *= resolution.x / resolution.y;
-    
-    float3 previousColor = srv.Sample(samplerState, float2(i.uv.x, 1.0f - i.uv.y)).rgb;
-    
-    float3 color = previousColor;
+    float3 color = mapped;
     color += tint * lensflare(uv, sPos) * flerActive.x;
     color -= noise(i.fragPos.xy) * .015;
     color = cc(color, .5, .1);
-    
     return float4(color, 1.0f);
 }

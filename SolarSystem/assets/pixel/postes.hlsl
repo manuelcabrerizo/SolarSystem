@@ -7,13 +7,6 @@ struct PS_Input
     float3 fragPos : TEXCOORD2;
 };
 
-cbuffer Common : register(b3)
-{
-    float2 resolution;
-    float time;
-    float pad0;
-}
-
 struct PointLight
 {
     float3 position_;
@@ -33,9 +26,6 @@ cbuffer LightConstBuffer : register(b2)
     float3 viewPos;
 };
 
-#define PI 3.14159265359
-#define TAU 6.28318530718
-
 float3 CalcPointLight(float3 color, PointLight light, float3 normal, float3 viewDir, float3 fragPos)
 {
 
@@ -46,48 +36,37 @@ float3 CalcPointLight(float3 color, PointLight light, float3 normal, float3 view
     float spec = pow(max(dot(viewDir, reflectDir), 0.0f), 32);
 
     float dist = length(light.position_ - fragPos);
-    float attenuation = 1.0f / dist; //1.0f / (light.constant_ + light.linear_ * dist + light.quadratic_ * (dist * dist));
+    float attenuation = 1.0f / dist;; //1.0f / (light.constant_ + light.linear_ * dist + light.quadratic_ * (dist * dist));
 
     float3 ambient = light.ambient_ * color;
     float3 diffuse = light.diffuse_ * diff * color;
     float3 specular = light.specular_ * spec * color;
 
-    ambient *= attenuation;
+    //ambient *= attenuation;
     diffuse *= attenuation;
     specular *= attenuation;
 
     return ambient + diffuse + specular;
 }
 
-float checkerboard(float2 tc)
-{
-    float tileScaleX = 12.0f;
-    float tileScaleY = 5.0f;
-    float tile = fmod(floor(tc.x * tileScaleX) + floor(tc.y * tileScaleY), 2.0);
-    return tile;
-}
-
-
 float4 fs_main(PS_Input i) : SV_TARGET
-{    
-    float4 color0 = float4(0.5f, 0.8f, 1.0f, 0.5f);
-    float4 color1 = float4(0.5f, 0.8f, 1.0f, 0.8f);
+{
+       
+    float t = length(i.uv) > 0.8f ? 1.0 : 0.0;
     
-    float2 uv = i.uv;
-  
-    float4 color = lerp(color0, color1, checkerboard(uv));
+    float dist = length(i.fragPos - viewPos)*0.2f;
+    float3 color = lerp(float3(0.1, 0.1, 0.1), float3(4.0, 0.5, 4.0), t);
     
-    return color;
+    
     
     float3 normal = normalize(i.nor);
     float3 viewDir = normalize(viewPos - i.fragPos);
-    float3 result = float3(0.0f, 0.0f, 0.0f);
+    float3 result = lerp(float3(0.0f, 0.0f, 0.0f), color, t);
     for (int index = 0; index < lightCount; index++)
     {
         PointLight light = lights[0];
-        result += CalcPointLight(color.rgb, light, normal, viewDir, i.fragPos);
+        result += lerp(CalcPointLight(color, light, normal, viewDir, i.fragPos), float3(0.0f, 0.0f, 0.0f), t);
     }
     
-    return float4(result, color.a);
-
+    return float4(result, 1.0f);
 }

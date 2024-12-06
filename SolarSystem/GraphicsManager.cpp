@@ -75,13 +75,6 @@ namespace mc
 
     void GraphicsManager::CreateSwapChain(const Window& window)
     {
-        // check for msaa
-        UINT msaaQuality4x;
-        device_->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 4, &msaaQuality4x);
-        if (msaaQuality4x <= 0)
-        {
-            throw std::runtime_error("Error msaa 4x not supported.");
-        }
         // create the d3d11 device swapchain and device context
         DXGI_SWAP_CHAIN_DESC swapChainDesc;
         swapChainDesc.BufferDesc.Width = window.Width();
@@ -91,10 +84,10 @@ namespace mc
         swapChainDesc.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
         swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
         swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-        swapChainDesc.SampleDesc.Count = 4;
-        swapChainDesc.SampleDesc.Quality = msaaQuality4x - 1;
+        swapChainDesc.SampleDesc.Count = 1;
+        swapChainDesc.SampleDesc.Quality = 0;
         swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDesc.BufferCount = 2;
+        swapChainDesc.BufferCount = 1;
         swapChainDesc.OutputWindow = window.Get();
         swapChainDesc.Windowed = true;
         swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
@@ -141,8 +134,8 @@ namespace mc
         depthStencilTextureDesc.MipLevels = 1;
         depthStencilTextureDesc.ArraySize = 1;
         depthStencilTextureDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-        depthStencilTextureDesc.SampleDesc.Count = 4;
-        depthStencilTextureDesc.SampleDesc.Quality = msaaQuality4x - 1; // TODO: test if this is correct
+        depthStencilTextureDesc.SampleDesc.Count = 1;
+        depthStencilTextureDesc.SampleDesc.Quality = 0; // TODO: test if this is correct
         depthStencilTextureDesc.Usage = D3D11_USAGE_DEFAULT;
         depthStencilTextureDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
         depthStencilTextureDesc.CPUAccessFlags = 0;
@@ -161,9 +154,9 @@ namespace mc
     {
         // D3D11_TEXTURE_ADDRESS_CLAMP; D3D11_TEXTURE_ADDRESS_WRAP;
         D3D11_SAMPLER_DESC colorMapDesc{};
-        colorMapDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-        colorMapDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-        colorMapDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+        colorMapDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+        colorMapDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+        colorMapDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
         colorMapDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
         colorMapDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
         colorMapDesc.MaxLOD = D3D11_FLOAT32_MAX;
