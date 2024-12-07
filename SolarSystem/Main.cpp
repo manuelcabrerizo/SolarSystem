@@ -89,6 +89,11 @@ public:
         return position;
     }
 
+    void SetCullBack(bool value)
+    {
+        cullBack_ = value;
+    }
+
     XMMATRIX GetModelMatrix()
     {
         XMMATRIX trans = XMMatrixTranslationFromVector(GetParentPosition() + position_);
@@ -111,6 +116,7 @@ private:
     mc::Texture* texture_{ nullptr };
     mc::VertexShader* vs_{ nullptr };
     mc::PixelShader* ps_{ nullptr };
+    bool cullBack_{ true };
 
     XMVECTOR position_;
     XMVECTOR rotation_;
@@ -135,6 +141,7 @@ public:
 
     void Draw(const mc::GraphicsManager& gm)
     {
+        gm.SetRasterizerStateCullBack();
         root_.Draw(gm, *this);
     }
 
@@ -146,6 +153,11 @@ private:
 
 void SceneNode::Draw(const mc::GraphicsManager& gm, const Scene& scene)
 {
+    if (!cullBack_)
+    {
+        gm.SetRasterizerStateCullNone();
+    }
+
     XMMATRIX trans = XMMatrixTranslationFromVector(GetParentPosition() + position_);
     XMMATRIX rot = XMMatrixRotationQuaternion(rotation_);
     XMMATRIX scale = XMMatrixScalingFromVector(scale_);
@@ -161,6 +173,11 @@ void SceneNode::Draw(const mc::GraphicsManager& gm, const Scene& scene)
     for (auto& child : childrens_)
     {
         child.Draw(gm, scene);
+    }
+
+    if (!cullBack_)
+    {
+        gm.SetRasterizerStateCullBack();
     }
 }
 
@@ -321,11 +338,9 @@ void Demo()
     mc::CollisionData collisionDataInner;
     mc::GeometryGenerator::LoadCollisionDataFromOBJFile(collisionDataInner, "assets/mesh/track_inner_col.obj");
 
-    mc::FrameBuffer frameBuffer(gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
-    mc::FrameBuffer bloom0Buffer(gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
-    mc::FrameBuffer bloom1Buffer(gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
-
-
+    mc::FrameBuffer msaaBuffer(gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, true);
+    mc::FrameBuffer bloom0Buffer(gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, false);
+    mc::FrameBuffer bloom1Buffer(gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, false);
 
     XMFLOAT3 position = XMFLOAT3(-2.5, 0.0125f, 0);
     mc::Ship shipBody(position, 2.0f, 0.04f);
@@ -393,14 +408,16 @@ void Demo()
     trackInner.SetPixelShader((mc::PixelShader*)sm.Get("trackRail"));
     trackInner.SetPosition(0, 0, 0);
     trackInner.SetScale(1, 1, 1);
+    trackInner.SetCullBack(false);
 
-    // Create track inner
+    // Create track outer
     SceneNode& trackOuter = scene.AddNode();
     trackOuter.SetMesh(&trackOuterMesh);
     trackOuter.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     trackOuter.SetPixelShader((mc::PixelShader*)sm.Get("trackRail"));
     trackOuter.SetPosition(0, 0, 0);
     trackOuter.SetScale(1, 1, 1);
+    trackOuter.SetCullBack(false);
 
     // Set Alpha blending
     gm.SetAlphaBlending();
@@ -473,8 +490,6 @@ void Demo()
         lightCPUBuffer.viewPos = camera.GetPosition();
         lightGPUBuffer.Update(gm, lightCPUBuffer);
 
-        gm.SetRasterizerStateCullNone();
-
         float shipVel = XMVectorGetX(XMVector3Length(shipBody.GetVelocity()));
         float fov = Lerp(fovMin, fovMax, std::clamp(shipVel * shipVel, 0.0f, 1.0f));
 
@@ -522,9 +537,10 @@ void Demo()
         commonCPUBuffer.time += dt;
         commonGPUBuffer.Update(gm, commonCPUBuffer);
 
-        frameBuffer.Bind(gm);
-        frameBuffer.Clear(gm, 0.1f, 0.1f, 0.3f);
+        msaaBuffer.Bind(gm);
+        msaaBuffer.Clear(gm, 0.1f, 0.1f, 0.3f);
         
+        gm.SetRasterizerStateCullBack();
         // Draw sky
         {
             // Compute the sky coord system so is always facing the camera
@@ -548,9 +564,10 @@ void Demo()
         }
         
         
-        
         gm.SetDepthStencilOn();
         scene.Draw(gm);
+
+        msaaBuffer.Resolve(gm);
 
         gm.SetRasterizerStateCullBack();
         objectCPUBuffer.model = XMMatrixScaling(static_cast<float>(windowWidth), static_cast<float>(windowHeight), 1.0f);
@@ -564,9 +581,9 @@ void Demo()
             bloom0Buffer.Bind(gm);
             bloom0Buffer.Clear(gm, 0.0f, 0.0f, 0.0f);
             sm.Get("bloomSelector")->Bind(gm);
-            frameBuffer.BindAsTexture(gm, 0);
+            msaaBuffer.BindAsTexture(gm, 0);
             quad.Draw(gm);
-            frameBuffer.UnbindAsTexture(gm, 0);
+            msaaBuffer.UnbindAsTexture(gm, 0);
         }
 
         // Bloom
@@ -604,11 +621,11 @@ void Demo()
             gm.BindBackBuffer();
             gm.Clear(0.3f, 0.1f, 0.1f);
             sm.Get("postProcess")->Bind(gm);
-            frameBuffer.BindAsTexture(gm, 0);
+            msaaBuffer.BindAsTexture(gm, 0);
             bloom0Buffer.BindAsTexture(gm, 1);
             quad.Draw(gm);
             bloom0Buffer.UnbindAsTexture(gm, 1);
-            frameBuffer.UnbindAsTexture(gm, 0);
+            msaaBuffer.UnbindAsTexture(gm, 0);
 
         }
 

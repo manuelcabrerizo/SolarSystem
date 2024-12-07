@@ -24,21 +24,21 @@ namespace mc
         void SetViewport(float x, float y, float width, float height) const;
         void BindBackBuffer();
 
-        void SetSamplerLinear();
-        void SetSamplerPoint();
+        void SetSamplerLinear() const;
+        void SetSamplerPoint() const;
 
-        void SetRasterizerStateCullBack();
-        void SetRasterizerStateCullFront();
-        void SetRasterizerStateCullNone();
-        void SetRasterizerStateWireframe();
+        void SetRasterizerStateCullBack() const;
+        void SetRasterizerStateCullFront() const;
+        void SetRasterizerStateCullNone() const;
+        void SetRasterizerStateWireframe() const;
 
-        void SetDepthStencilOn();
-        void SetDepthStencilOff();
-        void SetDepthStencilOnWriteMaskZero();
+        void SetDepthStencilOn() const;
+        void SetDepthStencilOff() const;
+        void SetDepthStencilOnWriteMaskZero() const;
 
-        void SetAlphaBlending();
-        void SetAdditiveBlending();
-        void SetBlendingOff();   
+        void SetAlphaBlending() const;
+        void SetAdditiveBlending() const;
+        void SetBlendingOff() const;   
 
     private:
         void CreateDevice();

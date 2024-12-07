@@ -135,7 +135,7 @@ namespace mc
         depthStencilTextureDesc.ArraySize = 1;
         depthStencilTextureDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
         depthStencilTextureDesc.SampleDesc.Count = 1;
-        depthStencilTextureDesc.SampleDesc.Quality = 0; // TODO: test if this is correct
+        depthStencilTextureDesc.SampleDesc.Quality = 0;
         depthStencilTextureDesc.Usage = D3D11_USAGE_DEFAULT;
         depthStencilTextureDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
         depthStencilTextureDesc.CPUAccessFlags = 0;
@@ -171,12 +171,12 @@ namespace mc
         }
     }
 
-    void GraphicsManager::SetSamplerLinear()
+    void GraphicsManager::SetSamplerLinear() const
     {
         deviceContext_->PSSetSamplers(0, 1, samplerStateLinear_.GetAddressOf());
     }
 
-    void GraphicsManager::SetSamplerPoint()
+    void GraphicsManager::SetSamplerPoint() const
     {
         deviceContext_->PSSetSamplers(0, 1, samplerStatePoint_.GetAddressOf());
     }
@@ -216,22 +216,22 @@ namespace mc
         device_->CreateRasterizerState(&wireFrameRasterizerDesc, &wireFrameRasterizer_);
     }
 
-    void GraphicsManager::SetRasterizerStateCullBack()
+    void GraphicsManager::SetRasterizerStateCullBack() const
     {
         deviceContext_->RSSetState(fillRasterizerCullBack_.Get());
     }
 
-    void GraphicsManager::SetRasterizerStateCullFront()
+    void GraphicsManager::SetRasterizerStateCullFront() const
     {
         deviceContext_->RSSetState(fillRasterizerCullFront_.Get());
     }
 
-    void GraphicsManager::SetRasterizerStateCullNone()
+    void GraphicsManager::SetRasterizerStateCullNone() const
     {
         deviceContext_->RSSetState(fillRasterizerCullNone_.Get());
     }
 
-    void GraphicsManager::SetRasterizerStateWireframe()
+    void GraphicsManager::SetRasterizerStateWireframe() const
     {
         deviceContext_->RSSetState(wireFrameRasterizer_.Get());
     }
@@ -272,17 +272,17 @@ namespace mc
         device_->CreateDepthStencilState(&depthStencilDesc, &depthStencilOnWriteMaskZero_);
     }
 
-    void GraphicsManager::SetDepthStencilOn()
+    void GraphicsManager::SetDepthStencilOn() const
     {
         deviceContext_->OMSetDepthStencilState(depthStencilOn_.Get(), 1);
     }
 
-    void GraphicsManager::SetDepthStencilOff()
+    void GraphicsManager::SetDepthStencilOff() const
     {
         deviceContext_->OMSetDepthStencilState(depthStencilOff_.Get(), 1);
     }
 
-    void GraphicsManager::SetDepthStencilOnWriteMaskZero()
+    void GraphicsManager::SetDepthStencilOnWriteMaskZero() const
     {
         deviceContext_->OMSetDepthStencilState(depthStencilOnWriteMaskZero_.Get(), 1);
     }
@@ -315,18 +315,18 @@ namespace mc
         device_->CreateBlendState(&blendStateDesc, &additiveBlending_);
     }
 
-    void GraphicsManager::SetAlphaBlending()
+    void GraphicsManager::SetAlphaBlending() const
     {
         deviceContext_->OMSetBlendState(alphaBlendOn_.Get(), 0, 0xffffffff);
     }
 
-    void GraphicsManager::SetAdditiveBlending()
+    void GraphicsManager::SetAdditiveBlending() const
     {
         deviceContext_->OMSetBlendState(additiveBlending_.Get(), 0, 0xffffffff);
 
     }
 
-    void GraphicsManager::SetBlendingOff()
+    void GraphicsManager::SetBlendingOff() const
     {
         deviceContext_->OMSetBlendState(alphaBlendOff_.Get(), 0, 0xffffffff);
     }
