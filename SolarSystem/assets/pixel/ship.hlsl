@@ -56,7 +56,15 @@ float4 fs_main(PS_Input i) : SV_TARGET
 {
     float4 textureColor = srv.Sample(samplerState, i.uv);
     
-    float3 normal = normalize(i.nor);
+    float3 red = float3(201.0f / 255.0f, 61.0f / 255.0f, 92.0f / 255.0f);
+    float colorDiff = length(red - textureColor.rgb);
+    
+    if (colorDiff < 0.2)
+    {
+        return float4(textureColor.rgb * 4.0f, 1.0f);
+    }
+    
+        float3 normal = normalize(i.nor);
     float3 viewDir = normalize(viewPos - i.fragPos);
     float3 result = float3(0.0f, 0.0f, 0.0f);
     for (int index = 0; index < lightCount; index++)
