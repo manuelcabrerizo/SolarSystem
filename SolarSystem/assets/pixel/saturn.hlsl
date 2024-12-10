@@ -1,3 +1,6 @@
+Texture2D srv : register(t0);
+SamplerState samplerState : register(s0);
+
 struct PS_Input
 {
     float4 pos : SV_POSITION;
@@ -26,6 +29,15 @@ cbuffer LightConstBuffer : register(b2)
     float3 viewPos;
 };
 
+cbuffer Common : register(b3)
+{
+    float2 resolution;
+    float time;
+    float pad0;
+    float2 screenPos;
+    float2 pad1;
+}
+
 float3 CalcPointLight(float3 color, PointLight light, float3 normal, float3 viewDir, float3 fragPos)
 {
 
@@ -36,35 +48,40 @@ float3 CalcPointLight(float3 color, PointLight light, float3 normal, float3 view
     float spec = pow(max(dot(viewDir, reflectDir), 0.0f), 32);
 
     float dist = length(light.position_ - fragPos);
-    float attenuation = 1.0f / dist;; //1.0f / (light.constant_ + light.linear_ * dist + light.quadratic_ * (dist * dist));
+    float attenuation = 1.0f / dist;
 
     float3 ambient = light.ambient_ * color;
     float3 diffuse = light.diffuse_ * diff * color;
     float3 specular = light.specular_ * spec * color;
 
-    //ambient *= attenuation;
     diffuse *= attenuation;
     specular *= attenuation;
 
-    return ambient + diffuse + specular;
+    return ambient + diffuse;
 }
 
 float4 fs_main(PS_Input i) : SV_TARGET
 {
-       
-    float t = length(i.uv) > 0.8f ? 1.0 : 0.0;
-    
-    float dist = length(i.fragPos - viewPos)*0.2f;
-    float3 color = lerp(float3(0.1, 0.1, 0.1), float3(4.0, 0.5, 4.0), t);
+    float2 uv = i.uv;
+    uv.x *= 0.0f;
+    float3 color = srv.Sample(samplerState, uv).rgb;
     
     float3 normal = normalize(i.nor);
     float3 viewDir = normalize(viewPos - i.fragPos);
-    float3 result = lerp(float3(0.0f, 0.0f, 0.0f), color, t);
-    for (int index = 0; index < lightCount; index++)
+    float3 result = float3(0.0f, 0.0f, 0.0f);
+    for (int index1 = 0; index1 < lightCount; index1++)
     {
         PointLight light = lights[0];
-        result += lerp(CalcPointLight(color, light, normal, viewDir, i.fragPos), float3(0.0f, 0.0f, 0.0f), t);
+        result += CalcPointLight(color, light, normal, viewDir, i.fragPos);
     }
     
-    return float4(result, 1.0f);
+    color = result;
+    
+    float3 fresnel = smoothstep(1.5f, 0.01f, dot(viewDir, normal));
+    fresnel = pow(fresnel, 8.0);
+    
+    color = lerp(color, float3(0.1, 0.25, 0.6)*1.0f, fresnel);
+    
+    return float4(color, 1.0f);
+
 }

@@ -203,7 +203,7 @@ float Remap(float v, float inMin, float inMax, float outMin, float outMax)
 
 void Demo()
 {
-    bool freeMode = false;
+    bool freeMode = true;
 
     // Camera variables
     float nearPlane = 0.01f;
@@ -222,14 +222,15 @@ void Demo()
     mc::ShaderManager& sm = engine.GetShaderManager();
 
     // Camera Variables
-    mc::Camera camera(XMFLOAT3(0, 0, 0));
+    mc::Camera camera(XMFLOAT3(0, 0, -2));
 
     // Init Shaders
     sm.AddVertexShader("vert", gm, "assets/vertex/vert.hlsl");
     sm.AddPixelShader("postProcess", gm, "assets/pixel/postProcess.hlsl");
-    sm.AddPixelShader("texturePixel", gm, "assets/pixel/texturePixel.hlsl");
+    sm.AddPixelShader("earth", gm, "assets/pixel/earth.hlsl");
+    sm.AddPixelShader("mars", gm, "assets/pixel/mars.hlsl");
     sm.AddPixelShader("skybox", gm, "assets/pixel/skybox.hlsl");
-    sm.AddPixelShader("sun", gm, "assets/pixel/sunPixel.hlsl");
+    sm.AddPixelShader("sun", gm, "assets/pixel/sun.hlsl");
     sm.AddPixelShader("trackBase", gm, "assets/pixel/trackBase.hlsl");
     sm.AddPixelShader("trackRail", gm, "assets/pixel/trackRail.hlsl");
     sm.AddPixelShader("ship", gm, "assets/pixel/ship.hlsl");
@@ -237,22 +238,37 @@ void Demo()
     sm.AddPixelShader("postes", gm, "assets/pixel/postes.hlsl");
     sm.AddPixelShader("bloomSelector", gm, "assets/pixel/bloomSelector.hlsl");
     sm.AddPixelShader("bloom", gm, "assets/pixel/bloom.hlsl");
+    sm.AddPixelShader("jupiter", gm, "assets/pixel/jupiter.hlsl");
+    sm.AddPixelShader("saturn", gm, "assets/pixel/saturn.hlsl");
 
-
+    // Load Shaders for the particle system
+    sm.AddVertexShader("soFireVer", gm, "assets/vertex/soFireVer.hlsl");
+    sm.AddGeometryShader("soFireGeo", gm, "assets/geometry/soFireGeo.hlsl", true);
+    sm.AddVertexShader("dwFireVer", gm, "assets/vertex/dwFireVer.hlsl");
+    sm.AddPixelShader("dwFirePix", gm, "assets/pixel/dwFirePix.hlsl");
+    sm.AddGeometryShader("dwFireGeo", gm, "assets/geometry/dwFireGeo.hlsl");
 
     // Load textures
     mc::Texture shipTexture(gm, "assets/textures/Overtone_Default_Diffuse.png");
+    mc::Texture jupiterTexture(gm, "assets/textures/planet.png");
+    mc::Texture saturnTexture(gm, "assets/textures/planet2.png");
+    mc::Texture lavaTexture(gm, "assets/textures/Lava.png");
+
+    // Create the particle system
+    mc::ParticleSystem particleSystem(gm, 2000, sm.Get("soFireVer"), sm.Get("soFireGeo"),
+        sm.Get("dwFireVer"), sm.Get("dwFirePix"), sm.Get("dwFireGeo"), lavaTexture);
+
 
     // Init a Const Buffer
     ObjectConstBuffer objectCPUBuffer{};
     objectCPUBuffer.model = XMMatrixIdentity();
-    mc::ConstBuffer<ObjectConstBuffer> objectGPUBuffer(gm, mc::ConstBufferBind::Vertex, objectCPUBuffer, 0);
+    mc::ConstBuffer<ObjectConstBuffer> objectGPUBuffer(gm, mc::BIND_TO_VS, objectCPUBuffer, 0);
 
     CameraConstBuffer cameraCPUBuffer{};
     cameraCPUBuffer.view = camera.GetViewMat();
     cameraCPUBuffer.proj = XMMatrixPerspectiveFovLH(fovMin, aspectRation, nearPlane, farPlane);
     cameraCPUBuffer.viewPos = camera.GetPosition();
-    mc::ConstBuffer<CameraConstBuffer> cameraGPUBuffer(gm, mc::ConstBufferBind::Vertex, cameraCPUBuffer, 1);
+    mc::ConstBuffer<CameraConstBuffer> cameraGPUBuffer(gm, mc::BIND_TO_VS|mc::BIND_TO_GS, cameraCPUBuffer, 1);
 
     LightConstBuffer lightCPUBuffer{};
     lightCPUBuffer.count = 1;
@@ -261,15 +277,15 @@ void Demo()
     lightCPUBuffer.lights[0].linear = 0.0014f;
     lightCPUBuffer.lights[0].quadratic = 0.000007;
     lightCPUBuffer.lights[0].ambient = XMFLOAT3(0.025f, 0.025f, 0.025f);
-    lightCPUBuffer.lights[0].diffuse = XMFLOAT3(100.5f, 100.5f, 100.5f);
+    lightCPUBuffer.lights[0].diffuse = XMFLOAT3(100.0f, 100.0f, 100.0f);
     lightCPUBuffer.lights[0].specular = XMFLOAT3(140.0f, 140.0f,140.0f);
     lightCPUBuffer.viewPos = camera.GetPosition();
-    mc::ConstBuffer<LightConstBuffer> lightGPUBuffer(gm, mc::ConstBufferBind::Pixel, lightCPUBuffer, 2);
+    mc::ConstBuffer<LightConstBuffer> lightGPUBuffer(gm, mc::BIND_TO_PS, lightCPUBuffer, 2);
 
     CommonConstBuffer commonCPUBuffer{};
     commonCPUBuffer.resolution = XMFLOAT2(windowWidth, windowHeight);
     commonCPUBuffer.time = 0.0f;
-    mc::ConstBuffer<CommonConstBuffer> commonGPUBuffer(gm, mc::ConstBufferBind::Pixel, commonCPUBuffer, 3);
+    mc::ConstBuffer<CommonConstBuffer> commonGPUBuffer(gm, mc::BIND_TO_PS, commonCPUBuffer, 3);
         
     // create the input layout
     mc::InputLayoutDesc desc = {
@@ -282,6 +298,20 @@ void Demo()
         4
     };
     mc::InputLayout IL(gm, *(mc::VertexShader *)sm.Get("vert"), desc);
+
+    // create the input layout for the particle system
+    mc::InputLayoutDesc particleILDesc = {
+        {
+            {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"TEXCOORD", 2, DXGI_FORMAT_R32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"TEXCOORD", 3, DXGI_FORMAT_R32_UINT, 0, 36, D3D11_INPUT_PER_VERTEX_DATA, 0}
+        },
+        5
+    };
+    mc::InputLayout particleIL(gm, *(mc::VertexShader*)sm.Get("soFireVer"), particleILDesc);
+
 
     // Create a quad
     mc::MeshData quadData;
@@ -338,9 +368,9 @@ void Demo()
     mc::CollisionData collisionDataInner;
     mc::GeometryGenerator::LoadCollisionDataFromOBJFile(collisionDataInner, "assets/mesh/track_inner_col.obj");
 
-    mc::FrameBuffer msaaBuffer(gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, true);
-    mc::FrameBuffer bloom0Buffer(gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, false);
-    mc::FrameBuffer bloom1Buffer(gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, false);
+    mc::FrameBuffer msaaBuffer(gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, true, 8);
+    mc::FrameBuffer bloom0Buffer(gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
+    mc::FrameBuffer bloom1Buffer(gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
 
     XMFLOAT3 position = XMFLOAT3(-2.5, 0.0125f, 0);
     mc::Ship shipBody(position, 2.0f, 0.04f);
@@ -381,13 +411,39 @@ void Demo()
     sun.SetPosition(0, 10, 40);
     sun.SetScale(10, 10, 10);
 
-    // Create the planet
-    SceneNode& planet = scene.AddNode();
-    planet.SetMesh(&planetMesh);
-    planet.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
-    planet.SetPixelShader((mc::PixelShader*)sm.Get("texturePixel"));
-    planet.SetPosition(0, -20.5, 0);
-    planet.SetScale(20, 20, 20);
+    // Create the earth
+    SceneNode& earth = scene.AddNode();
+    earth.SetMesh(&planetMesh);
+    earth.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
+    earth.SetPixelShader((mc::PixelShader*)sm.Get("earth"));
+    earth.SetPosition(0, -20.5, 0);
+    earth.SetScale(20, 20, 20);
+
+    // Create the mars
+    SceneNode& mars = scene.AddNode();
+    mars.SetMesh(&planetMesh);
+    mars.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
+    mars.SetPixelShader((mc::PixelShader*)sm.Get("mars"));
+    mars.SetPosition(40, 0, 30);
+    mars.SetScale(10, 10, 10);
+
+    // Create the jupiter
+    SceneNode& jupiter = scene.AddNode();
+    jupiter.SetMesh(&planetMesh);
+    jupiter.SetTexture(&jupiterTexture);
+    jupiter.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
+    jupiter.SetPixelShader((mc::PixelShader*)sm.Get("jupiter"));
+    jupiter.SetPosition(-80, 0, 0);
+    jupiter.SetScale(20, 20, 20);
+
+    // create the saturn
+    SceneNode& saturn = jupiter.AddNode();
+    saturn.SetMesh(&planetMesh);
+    saturn.SetTexture(&saturnTexture);
+    saturn.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
+    saturn.SetPixelShader((mc::PixelShader*)sm.Get("saturn"));
+    saturn.SetPosition(-20, 15, -20);
+    saturn.SetScale(10, 10, 10);
 
 
     //////////////////////////////////////
@@ -421,7 +477,6 @@ void Demo()
 
     // Set Alpha blending
     gm.SetAlphaBlending();
-
     sm.Get("vert")->Bind(gm);
     objectGPUBuffer.Bind(gm);
     cameraGPUBuffer.Bind(gm);
@@ -434,6 +489,8 @@ void Demo()
     float time = 0.0f;
 
     int frameCount = 0.0f;
+
+    double gameTime = 0.0f;
 
     while (engine.IsRunning())
     {
@@ -498,7 +555,6 @@ void Demo()
         cameraCPUBuffer.proj = XMMatrixPerspectiveFovLH(fov, aspectRation, nearPlane, farPlane);
         cameraCPUBuffer.viewPos = camera.GetPosition();
         cameraGPUBuffer.Update(gm, cameraCPUBuffer);
-
         
         XMVECTOR sunWorld = XMVector4Transform(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), sun.GetModelMatrix());
         XMVECTOR sunView = XMVector4Transform(sunWorld, cameraCPUBuffer.view);
@@ -537,9 +593,13 @@ void Demo()
         commonCPUBuffer.time += dt;
         commonGPUBuffer.Update(gm, commonCPUBuffer);
 
+        // Update the particle system
+        particleSystem.Update(XMFLOAT3(0, 0, 0), XMFLOAT3(0, 0, 0), camera.GetPosition(), gameTime, dt);
+
+
         msaaBuffer.Bind(gm);
         msaaBuffer.Clear(gm, 0.1f, 0.1f, 0.3f);
-        
+       
         gm.SetRasterizerStateCullBack();
         // Draw sky
         {
@@ -566,6 +626,11 @@ void Demo()
         
         gm.SetDepthStencilOn();
         scene.Draw(gm);
+
+        particleIL.Bind(gm);
+        particleSystem.Draw(gm);
+        sm.Get("vert")->Bind(gm);
+
 
         msaaBuffer.Resolve(gm);
 
@@ -632,6 +697,7 @@ void Demo()
         gm.Present();
 
         lastCounter = currentCounter;
+        gameTime += dt;
     }
 }
 
@@ -639,6 +705,7 @@ int main()
 {
     try
     {
+        srand(time(0));
         Demo();
     }
     catch (std::exception& e)

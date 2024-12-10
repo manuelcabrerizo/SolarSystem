@@ -2,8 +2,6 @@
 
 #include "Shader.h"
 
-
-
 namespace mc
 {
     class VertexShader : public Shader

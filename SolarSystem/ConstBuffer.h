@@ -5,10 +5,11 @@
 
 namespace mc
 {
-    enum class ConstBufferBind
+    enum ConstBufferBind
     {
-        Vertex,
-        Pixel
+        BIND_TO_VS = (1 << 0),
+        BIND_TO_PS = (1 << 1),
+        BIND_TO_GS = (1 << 2)
     };
 
     template<typename Type>
@@ -18,7 +19,7 @@ namespace mc
         ConstBuffer(const ConstBuffer&) = delete;
         ConstBuffer& operator=(const ConstBuffer&) = delete;
 
-        ConstBuffer(const GraphicsManager& gm, ConstBufferBind bindTo, const Type& data, unsigned int slot)
+        ConstBuffer(const GraphicsManager& gm, unsigned int bindTo, const Type& data, unsigned int slot)
             : slot(slot), bindTo(bindTo)
         {
             D3D11_BUFFER_DESC bufferDesc;
@@ -50,16 +51,23 @@ namespace mc
         
         void Bind(const GraphicsManager& gm)
         {
-            switch (bindTo)
+            if (bindTo & ConstBufferBind::BIND_TO_VS)
             {
-            case ConstBufferBind::Vertex: GetDeviceContext(gm)->VSSetConstantBuffers(slot, 1, buffer.GetAddressOf()); break;
-            case ConstBufferBind::Pixel:  GetDeviceContext(gm)->PSSetConstantBuffers(slot, 1, buffer.GetAddressOf()); break;
+                GetDeviceContext(gm)->VSSetConstantBuffers(slot, 1, buffer.GetAddressOf());
+            }
+            if (bindTo & ConstBufferBind::BIND_TO_PS)
+            {
+                GetDeviceContext(gm)->PSSetConstantBuffers(slot, 1, buffer.GetAddressOf());
+            }
+            if (bindTo & ConstBufferBind::BIND_TO_GS)
+            {
+                GetDeviceContext(gm)->GSSetConstantBuffers(slot, 1, buffer.GetAddressOf());
             }
         }
     private:
         Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
         unsigned int  slot;
-        ConstBufferBind bindTo;
+        unsigned int bindTo;
     };
 }
 

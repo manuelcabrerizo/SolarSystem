@@ -181,7 +181,7 @@ float4 fs_main(PS_Input i) : SV_TARGET
     st.y += (sin(st.x * TAU * 8 + time * 2.0f) * 0.5f + 0.5f) * 0.01;
 
     float e = ridgedMF(st, 6);
-    e *= e * e*e;
+    e *= e*e*e;
     float3 color = lerp(float3(0.5, 0.2, 0.1),
                         float3(1.0f, 1.0f, 0.2f), e) * 3.0f;
     

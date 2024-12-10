@@ -39,13 +39,12 @@ float3 CalcPointLight(float3 color, PointLight light, float3 normal, float3 view
     float spec = pow(max(dot(viewDir, reflectDir), 0.0f), 32);
 
     float dist = length(light.position_ - fragPos);
-    float attenuation = 1.0f / dist;; //1.0f / (light.constant_ + light.linear_ * dist + light.quadratic_ * (dist * dist));
+    float attenuation = 1.0f / dist;
 
     float3 ambient = light.ambient_ * color;
     float3 diffuse = light.diffuse_ * diff * color;
     float3 specular = light.specular_ * spec * color;
 
-    //ambient *= attenuation;
     diffuse *= attenuation;
     specular *= attenuation;
 

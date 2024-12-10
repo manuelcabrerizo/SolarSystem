@@ -1,6 +1,3 @@
-Texture2D srv : register(t0);
-SamplerState samplerState : register(s0);
-
 struct PS_Input
 {
     float4 pos : SV_POSITION;

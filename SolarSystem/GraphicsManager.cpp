@@ -154,9 +154,9 @@ namespace mc
     {
         // D3D11_TEXTURE_ADDRESS_CLAMP; D3D11_TEXTURE_ADDRESS_WRAP;
         D3D11_SAMPLER_DESC colorMapDesc{};
-        colorMapDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-        colorMapDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-        colorMapDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+        colorMapDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+        colorMapDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+        colorMapDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
         colorMapDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
         colorMapDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
         colorMapDesc.MaxLOD = D3D11_FLOAT32_MAX;
@@ -164,6 +164,9 @@ namespace mc
         {
             throw std::runtime_error("Error: Failed Creating sampler state Point\n");
         }
+        colorMapDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+        colorMapDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+        colorMapDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
         colorMapDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
         if (FAILED(device_->CreateSamplerState(&colorMapDesc, &samplerStateLinear_)))
         {
@@ -174,11 +177,13 @@ namespace mc
     void GraphicsManager::SetSamplerLinear() const
     {
         deviceContext_->PSSetSamplers(0, 1, samplerStateLinear_.GetAddressOf());
+        deviceContext_->GSSetSamplers(0, 1, samplerStateLinear_.GetAddressOf());
     }
 
     void GraphicsManager::SetSamplerPoint() const
     {
         deviceContext_->PSSetSamplers(0, 1, samplerStatePoint_.GetAddressOf());
+        deviceContext_->GSSetSamplers(0, 1, samplerStatePoint_.GetAddressOf());
     }
 
     void GraphicsManager::CreateRasterizerStates()

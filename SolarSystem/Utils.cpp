@@ -29,4 +29,33 @@ namespace mc
     {
         delete[] data;
     }
+
+    float Utils::RandF()
+    {
+        return (float)(rand()) / (float)RAND_MAX;
+    }
+
+    float Utils::RandF(float a, float b)
+    {
+        return a + RandF() * (b - a);
+    }
+
+    XMVECTOR Utils::RandUnitVec3()
+    {
+        XMVECTOR one = XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f);
+        while (true)
+        {
+            XMVECTOR v = XMVectorSet(
+                RandF(-1.0f, 1.0f),
+                RandF(-1.0f, 1.0f),
+                RandF(-1.0f, 1.0f), 0.0f);
+            if (XMVector3Greater(XMVector3LengthSq(v), one))
+            {
+                continue;
+            }
+            return XMVector3Normalize(v);
+        }
+
+    }
+
 }

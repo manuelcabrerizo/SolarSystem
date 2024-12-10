@@ -17,10 +17,10 @@ namespace mc
     FrameBuffer::FrameBuffer(const GraphicsManager& gm,
         unsigned int x, unsigned int y,
         unsigned int w, unsigned int h,
-        DXGI_FORMAT format, bool msaa)
-        : x_(x), y_(y), w_(w), h_(h), format_(format)
+        DXGI_FORMAT format, bool hasMsaa, int msaa)
+        : x_(x), y_(y), w_(w), h_(h), format_(format), msaa_(msaa)
     {
-        if (!msaa)
+        if (!hasMsaa)
         {
             CreateTexture(gm);
             CreateRenderTargetView(gm);
@@ -30,7 +30,7 @@ namespace mc
         else
         {
             // check for msaa
-            GetDevice(gm)->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 8, &msaaQuality_);
+            GetDevice(gm)->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, msaa_, &msaaQuality_);
             if (msaaQuality_ <= 0)
             {
                 throw std::runtime_error("Error msaa not supported.");
@@ -152,7 +152,7 @@ namespace mc
         texDesc.MipLevels = 1;
         texDesc.ArraySize = 1;
         texDesc.Format = format_;
-        texDesc.SampleDesc.Count = 8;
+        texDesc.SampleDesc.Count = msaa_;
         texDesc.SampleDesc.Quality = msaaQuality_ - 1;
         texDesc.Usage = D3D11_USAGE_DEFAULT;
         texDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
@@ -217,7 +217,7 @@ namespace mc
         depthStencilTextureDesc.MipLevels = 1;
         depthStencilTextureDesc.ArraySize = 1;
         depthStencilTextureDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-        depthStencilTextureDesc.SampleDesc.Count = 8;
+        depthStencilTextureDesc.SampleDesc.Count = msaa_;
         depthStencilTextureDesc.SampleDesc.Quality = msaaQuality_ - 1;
         depthStencilTextureDesc.Usage = D3D11_USAGE_DEFAULT;
         depthStencilTextureDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;

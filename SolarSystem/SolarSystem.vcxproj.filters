@@ -72,6 +72,12 @@
     <ClCompile Include="Ship.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ParticleSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeometryShader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -137,6 +143,12 @@
     <ClInclude Include="Ship.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ParticleSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GeometryShader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="SolarSystem.rc">
@@ -147,8 +159,8 @@
     <None Include="assets\pixel\trackBase.hlsl" />
     <None Include="assets\pixel\postProcess.hlsl" />
     <None Include="assets\pixel\skybox.hlsl" />
-    <None Include="assets\pixel\sunPixel.hlsl" />
-    <None Include="assets\pixel\texturePixel.hlsl" />
+    <None Include="assets\pixel\sun.hlsl" />
+    <None Include="assets\pixel\earth.hlsl" />
     <None Include="assets\vertex\vert.hlsl" />
     <None Include="assets\pixel\trackRail.hlsl" />
     <None Include="assets\pixel\ship.hlsl" />
@@ -156,6 +168,9 @@
     <None Include="assets\pixel\bloom.hlsl" />
     <None Include="assets\pixel\meta.hlsl" />
     <None Include="assets\pixel\postes.hlsl" />
+    <None Include="assets\pixel\mars.hlsl" />
+    <None Include="assets\pixel\jupiter.hlsl" />
+    <None Include="assets\pixel\saturn.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="assets\textures\Lava.png">

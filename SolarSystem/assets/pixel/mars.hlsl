@@ -26,55 +26,21 @@ cbuffer LightConstBuffer : register(b2)
     float3 viewPos;
 };
 
-float3 CalcPointLight(float3 color, PointLight light, float3 normal, float3 viewDir, float3 fragPos, float specMask)
+float3 CalcPointLight(float3 color, PointLight light, float3 normal, float3 viewDir, float3 fragPos)
 {
 
     float3 lightDir = normalize(light.position_ - fragPos);
     float diff = max(dot(normal, lightDir), 0.0f);
 
-    float3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0f), 8);
-
-    float dist = length(light.position_ - fragPos);
-    float attenuation = 1.0f / dist; //1.0f / (light.constant_ + light.linear_ * dist + light.quadratic_ * (dist * dist));
-
     float3 ambient = light.ambient_ * color;
-    float3 diffuse = light.diffuse_ * diff * color;
-    float3 specular = light.specular_ * spec * color;
+    float3 diffuse = (light.diffuse_*0.99) * diff * color;
 
-    //ambient *= attenuation;
+    float attenuation = 1.0f / length(light.position_ - fragPos);
     diffuse *= attenuation;
-    specular *= attenuation;
 
-    return ambient + diffuse + (specular * specMask);
+    return ambient + diffuse;
 }
 
-float inverseLerp(float v, float minValue, float maxValue)
-{
-    return (v - minValue) / (maxValue - minValue);
-}
-
-float remap(float v, float inMin, float inMax, float outMin, float outMax)
-{
-    float t = inverseLerp(v, inMin, inMax);
-    return lerp(outMin, outMax, t);
-
-}
-
-float3 mod289(float3 x)
-{
-    return x - floor(x / 289.0f) * 289.0f;
-}
-
-float4 mod289(float4 x)
-{
-    return x - floor(x / 289.0f) * 289.0f;
-}
-
-float4 permute(float4 x)
-{
-    return mod289((x * 34.0 + 1.0) * x);
-}
 
 float3 hash3(float3 p)
 {
@@ -126,14 +92,10 @@ float noise(in float2 st)
             (d - b) * u.x * u.y;
 }
 
-
-
-
-
 float fbm(in float3 p, int octaves, float persistence, float lacunarity)
 {
     float amplitude = 0.5f;
-    float frequency = 1.0f;
+    float frequency = 0.25f;
     float total = 0.0f;
     float normalization = 0.0f;
     for (int i = 0; i < octaves; i++)
@@ -151,7 +113,6 @@ float fbm(in float3 p, int octaves, float persistence, float lacunarity)
 
 float4 fs_main(PS_Input i) : SV_TARGET
 {
-    
     float2 pixelCoords = i.uv;
     float3 color = float3(1.0f, 1.0f, 1.0f);
         
@@ -162,25 +123,28 @@ float4 fs_main(PS_Input i) : SV_TARGET
     
     float3 noiseCoord = wsPosition * 1.0f;
     float noiseSample = fbm(noiseCoord, 6, 0.5f, 2.0f);
-    float moistureMap = fbm(noiseCoord * 0.5f + float3(20.0f, 20.0f, 20.0f),
-                            2, 0.5, 2.0) * 1.5f;
-    float waterMask = smoothstep(0.001, 0.06, noiseSample);
-    float landMask = smoothstep(0.05, 0.1, noiseSample);
-    float3 waterColor = lerp(float3(0.005, 0.09, 0.35), 
-                             float3(0.09, 0.26, 0.57),
-                             waterMask);
-    float3 landColor = lerp(float3(0.5, 1.0, 0.3),
-                            float3(0.1, 0.7, 0.2),
-                            landMask);
-    landColor = lerp(landColor,
-                     float3(1.0f, 1.0f, 0.5f), smoothstep(0.4, 0.5, moistureMap));
-    landColor = lerp(landColor,
-                     float3(0.5f, 0.5f, 0.5f), smoothstep(0.08, 0.18, noiseSample));
-    landColor = lerp(landColor,
-                     float3(1.0f, 1.0f, 1.0f), smoothstep(0.18, 0.25, noiseSample));
-    float mask = smoothstep(0.05, 0.06, noiseSample);
-    color = lerp(waterColor, landColor, mask);
 
+    float waterMask = smoothstep(0.001, 0.04, noiseSample);
+    float landMask = smoothstep(0.05, 0.1, noiseSample);
+    
+    float3 marsColor = float3(218.0 / 255.0, 79.0 / 255.0, 7.0 / 255.0)*0.8;
+    
+    float3 waterColor = lerp(float3(marsColor.r, marsColor.g, marsColor.b),
+                             float3(marsColor.r*0.65, marsColor.g*0.65, marsColor.b*0.65),
+                             waterMask);
+    float3 landColor = lerp(float3(marsColor.r * 0.75, marsColor.g * 0.75, marsColor.b * 0.75),
+                            float3(marsColor.r * 0.8, marsColor.g * 0.7, marsColor.b * 0.7),
+                            landMask);
+    
+
+    landColor = lerp(landColor,
+                     float3(marsColor.r * 0.9, marsColor.g * 0.8, marsColor.b * 0.8), smoothstep(0.08, 0.18, noiseSample));
+    landColor = lerp(landColor,
+                     float3(marsColor.r*1.1, marsColor.g*1.1, marsColor.b*1.1), smoothstep(0.18, 0.25, noiseSample));
+    
+    float mask = smoothstep(0.05, 0.1, noiseSample);
+    
+    color = lerp(waterColor, landColor, mask);
     
     float3 normal = normalize(i.nor);
     float3 viewDir = normalize(viewPos - i.fragPos);
@@ -188,22 +152,15 @@ float4 fs_main(PS_Input i) : SV_TARGET
     for (int index = 0; index < lightCount; index++)
     {
         PointLight light = lights[0];
-        result += CalcPointLight(color, light, normal, viewDir, i.fragPos, 1.0f - mask);
+        result += CalcPointLight(color, light, normal, viewDir, i.fragPos);
     }
     
     color = result;
     
-    float3 fresnel = smoothstep(1.0f, 0.01f, dot(viewDir, normal));
+    float3 fresnel = smoothstep(1.5f, 0.01f, dot(viewDir, normal));
     fresnel = pow(fresnel, 8.0);
     
-    color = lerp(color, float3(0.0, 0.5, 1.0)*2.0f, fresnel);
+    color = lerp(color, float3(0.9, 0.6, 0.4), fresnel);
 
-    
-    
-
-
-    
- 
-   
     return float4(color, 1.0f);
 }

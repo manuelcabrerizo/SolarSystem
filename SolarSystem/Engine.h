@@ -14,6 +14,7 @@
 #include "GeometryGenerator.h"
 #include "Mesh.h"
 #include "Camera.h"
+#include "ParticleSystem.h"
 
 namespace mc
 {

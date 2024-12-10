@@ -15,6 +15,11 @@ namespace mc
         shaders_.emplace(std::make_pair(name, std::make_unique<PixelShader>(gm, filepath)));
     }
 
+    void ShaderManager::AddGeometryShader(const std::string& name, const GraphicsManager& gm, const std::string& filepath, bool streamOuput)
+    {
+        shaders_.emplace(std::make_pair(name, std::make_unique<GeometryShader>(gm, filepath, streamOuput)));
+    }
+
     Shader* ShaderManager::Get(const std::string& name)
     {
         return shaders_.at(name).get();

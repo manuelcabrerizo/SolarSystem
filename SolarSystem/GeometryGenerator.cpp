@@ -257,8 +257,6 @@ namespace mc
             throw std::runtime_error("Error opening the obj file");
         }
     }
-
-
     void GeometryGenerator::LoadCollisionDataFromOBJFile(CollisionData& collisionData, const std::string& filepath)
     {
         std::ifstream file;
