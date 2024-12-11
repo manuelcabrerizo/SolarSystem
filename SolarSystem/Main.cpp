@@ -226,6 +226,8 @@ void Demo()
 
     // Init Shaders
     sm.AddVertexShader("vert", gm, "assets/vertex/vert.hlsl");
+    sm.AddVertexShader("fontVert", gm, "assets/vertex/fontVert.hlsl");
+    sm.AddPixelShader("fontPixel", gm, "assets/pixel/fontPixel.hlsl");
     sm.AddPixelShader("postProcess", gm, "assets/pixel/postProcess.hlsl");
     sm.AddPixelShader("earth", gm, "assets/pixel/earth.hlsl");
     sm.AddPixelShader("mars", gm, "assets/pixel/mars.hlsl");
@@ -253,11 +255,13 @@ void Demo()
     mc::Texture jupiterTexture(gm, "assets/textures/planet.png");
     mc::Texture saturnTexture(gm, "assets/textures/planet2.png");
     mc::Texture thrustTexture(gm, "assets/textures/neon.png");
+    mc::Texture fontTexture(gm, "assets/textures/font.png");
 
     // Create the particle system
     mc::ParticleSystem particleSystem(gm, 1000, sm.Get("soFireVer"), sm.Get("soFireGeo"),
         sm.Get("dwFireVer"), sm.Get("dwFirePix"), sm.Get("dwFireGeo"), thrustTexture);
 
+    mc::Text textWrite(gm, 1000, fontTexture, 7, 9, sm.Get("fontVert"), sm.Get("fontPixel"));
 
     // Init a Const Buffer
     ObjectConstBuffer objectCPUBuffer{};
@@ -486,10 +490,6 @@ void Demo()
     LARGE_INTEGER lastCounter;
     QueryPerformanceCounter(&lastCounter); 
 
-    float time = 0.0f;
-
-    int frameCount = 0.0f;
-
     double gameTime = 0.0f;
 
     while (engine.IsRunning())
@@ -504,17 +504,6 @@ void Demo()
         double lastTime = (double)lastCounter.QuadPart / frequency.QuadPart;
         double currentTime = (double)currentCounter.QuadPart / frequency.QuadPart;
         float dt = static_cast<float>(currentTime - lastTime);
-
-        
-        if (time >= 1.0f)
-        {
-            std::cout << "FPS: " << frameCount << "\n";
-            frameCount = 0;
-            time = 0;
-        }
-        time += dt;
-        frameCount++;
-        
 
         sm.HotReaload(gm);
 
@@ -640,7 +629,7 @@ void Demo()
         gm.SetRasterizerStateCullBack();
         objectCPUBuffer.model = XMMatrixScaling(static_cast<float>(windowWidth), static_cast<float>(windowHeight), 1.0f);
         cameraCPUBuffer.view = XMMatrixIdentity();
-        cameraCPUBuffer.proj = XMMatrixOrthographicLH(windowWidth, windowHeight, 0, 100);
+        cameraCPUBuffer.proj = XMMatrixOrthographicLH(windowWidth, windowHeight, -1, 100);
         objectGPUBuffer.Update(gm, objectCPUBuffer);
         cameraGPUBuffer.Update(gm, cameraCPUBuffer);
 
@@ -695,6 +684,17 @@ void Demo()
             bloom0Buffer.UnbindAsTexture(gm, 1);
             msaaBuffer.UnbindAsTexture(gm, 0);
 
+        }
+
+        // Draw text
+        {
+            
+            textWrite.Write(gm, "FPS: " + std::to_string((int)(1.0f/dt)), -windowWidth*0.5f, windowHeight*0.5, 7 * 4, 9 * 4);
+            textWrite.Write(gm, "Time: " + std::to_string(gameTime), -windowWidth * 0.5f, (windowHeight * 0.5) - 9 * 4, 7 * 4, 9 * 4);
+
+
+            textWrite.Render(gm);
+            sm.Get("vert")->Bind(gm);
         }
 
         gm.Present();
