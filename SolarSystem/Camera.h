@@ -12,7 +12,10 @@ namespace mc
     class Camera
     {
     public:
-        Camera(const XMFLOAT3& position);
+        Camera(const XMFLOAT3& position, float nearPlane,
+               float farPlane,
+               float fovMin, float fovMax,
+               float aspectRation);
         void Update(const InputManager& im, float dt);
         void FollowShip(const Ship& ship);
         const XMMATRIX& GetViewMat();
@@ -23,6 +26,11 @@ namespace mc
         XMVECTOR GetFront() const { return front_; }
         XMVECTOR GetUp() const { return up_; }
 
+        float GetNearPlane() { return nearPlane_; }
+        float GetFarPlane() { return farPlane_; }
+        float GetFovMin() { return fovMin_; }
+        float GetFovMax() { return fovMax_; }
+        float GetAspectRatio() { return aspectRation_; }
 
     private:
 
@@ -36,6 +44,13 @@ namespace mc
         XMVECTOR front_;
         XMVECTOR worldUp_;
         XMMATRIX view_;
+
+        float nearPlane_;
+        float farPlane_;
+        float fovMin_;
+        float fovMax_;
+        float aspectRation_;
+
     };
 }
 

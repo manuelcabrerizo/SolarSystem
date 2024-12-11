@@ -16,6 +16,7 @@
 #include "Camera.h"
 #include "ParticleSystem.h"
 #include "Text.h"
+#include "Utils.h"
 
 namespace mc
 {

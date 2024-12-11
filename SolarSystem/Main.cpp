@@ -1,216 +1,32 @@
-#include <iostream>
-#include <cmath>
-#include <list>
+#include "Game.h"
 
-#include <DirectXMath.h>
-#include "Engine.h"
 
-#include "Ship.h"
-
-using namespace DirectX;
-
-struct ObjectConstBuffer
+int main()
 {
-    XMMATRIX model;
-
-};
-struct CameraConstBuffer
-{
-    XMMATRIX view;
-    XMMATRIX proj;
-    XMFLOAT3 viewPos;
-    float pad;
-};
-
-struct PointLight
-{
-    XMFLOAT3 position;
-    float constant;
-    XMFLOAT3 ambient;
-    float linear;
-    XMFLOAT3 diffuse;
-    float quadratic;
-    XMFLOAT3 specular;
-    float pad0;
-};
-
-struct LightConstBuffer
-{
-    PointLight lights[4];
-    int count;
-    XMFLOAT3 viewPos;
-};
-
-struct CommonConstBuffer
-{
-    XMFLOAT2 resolution;
-    float time;
-    float pad0;
-    XMFLOAT2 screenPos;
-    XMFLOAT2 flerActive;
-};
-
-class Scene;
-
-class SceneNode
-{
-public:
-    void SetPosition(float x, float y, float z)
+    try
     {
-        position_ = XMVectorSet(x, y, z, 1.0f);
+        srand(time(0));
+        mc::Game game;
+        game.Run();
     }
-    void SetRotation(XMVECTOR rotation)
+    catch (std::exception& e)
     {
-        rotation_ = rotation;
+        // TODO: show the message in a message box
+        std::cout << "Error: " << e.what() << "\n";
     }
-    void SetScale(float x, float y, float z)
-    {
-        scale_ = XMVectorSet(x, y, z, 1.0f);
-    }
-    void SetMesh(mc::Mesh* mesh) { mesh_ = mesh; }
-    void SetTexture(mc::Texture* texture) { texture_ = texture; }
-    void SetVertexShader(mc::VertexShader* vs) { vs_ = vs; }
-    void SetPixelShader(mc::PixelShader* ps) { ps_ = ps; }
-
-    XMVECTOR GetPosition()
-    {
-        return position_;
-    }
-
-    XMVECTOR GetParentPosition()
-    {
-        SceneNode* parent = parent_;
-        XMVECTOR position = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
-        while (parent)
-        {
-            position += parent->position_;
-            parent = parent->parent_;
-        }
-        return position;
-    }
-
-    void SetCullBack(bool value)
-    {
-        cullBack_ = value;
-    }
-
-    XMMATRIX GetModelMatrix()
-    {
-        XMMATRIX trans = XMMatrixTranslationFromVector(GetParentPosition() + position_);
-        XMMATRIX rot = XMMatrixRotationQuaternion(rotation_);
-        XMMATRIX scale = XMMatrixScalingFromVector(scale_);
-        return scale * rot * trans;
-    }
-
-    SceneNode& AddNode()
-    {
-        SceneNode& node = childrens_.emplace_back();
-        node.parent_ = this;
-        return node;
-    }
-
-    void Draw(const mc::GraphicsManager& gm, const Scene& scene);
-
-private:
-    mc::Mesh* mesh_{nullptr};
-    mc::Texture* texture_{ nullptr };
-    mc::VertexShader* vs_{ nullptr };
-    mc::PixelShader* ps_{ nullptr };
-    bool cullBack_{ true };
-
-    XMVECTOR position_;
-    XMVECTOR rotation_;
-    XMVECTOR scale_;
-    std::list<SceneNode> childrens_;
-    SceneNode* parent_;
-};
-
-class Scene
-{
-public:
-    Scene(ObjectConstBuffer* objectCPUBuffer, mc::ConstBuffer<ObjectConstBuffer>* objectGPUBuffer)
-        : objectCPUBuffer_(objectCPUBuffer), objectGPUBuffer_(objectGPUBuffer)
-    {
-    }
-
-    SceneNode& AddNode()
-    {
-        return root_.AddNode();
-    }
-
-
-    void Draw(const mc::GraphicsManager& gm)
-    {
-        gm.SetRasterizerStateCullBack();
-        root_.Draw(gm, *this);
-    }
-
-    ObjectConstBuffer* objectCPUBuffer_;
-    mc::ConstBuffer<ObjectConstBuffer>* objectGPUBuffer_;
-private:
-    SceneNode root_;
-};
-
-void SceneNode::Draw(const mc::GraphicsManager& gm, const Scene& scene)
-{
-    if (!cullBack_)
-    {
-        gm.SetRasterizerStateCullNone();
-    }
-
-    XMMATRIX trans = XMMatrixTranslationFromVector(GetParentPosition() + position_);
-    XMMATRIX rot = XMMatrixRotationQuaternion(rotation_);
-    XMMATRIX scale = XMMatrixScalingFromVector(scale_);
-
-    scene.objectCPUBuffer_->model = scale * rot * trans;
-    scene.objectGPUBuffer_->Update(gm, *scene.objectCPUBuffer_);
-    if (vs_) { vs_->Bind(gm); }
-    if (ps_) { ps_->Bind(gm); }
-    if (texture_) { texture_->Bind(gm, 0); }
-    if (mesh_) { mesh_->Draw(gm); }
-    if (texture_) { texture_->Unbind(gm, 0); }
-
-    for (auto& child : childrens_)
-    {
-        child.Draw(gm, scene);
-    }
-
-    if (!cullBack_)
-    {
-        gm.SetRasterizerStateCullBack();
-    }
+    return 0;
 }
+
+
+/*
+using namespace DirectX;
 
 constexpr int windowWidth = 1366;
 constexpr int windowHeight = 768;
 
-float Lerp(float a, float b, float t)
-{
-    return (1.0f - t) * a + b * t;
-}
-
-float InverseLerp(float a, float b, float v)
-{
-    return (v - a) / (b - a);
-}
-
-float Remap(float v, float inMin, float inMax, float outMin, float outMax)
-{
-    float t = InverseLerp(inMin, inMax, v);
-    return Lerp(outMin, outMax, t);
-
-}
-
 void Demo()
 {
     bool freeMode = false;
-
-    // Camera variables
-    float nearPlane = 0.01f;
-    float farPlane = 100.0f;
-    float fovMin = (60.0f / 180.0f) * XM_PI;
-    float fovMax = (90.0f / 180.0f) * XM_PI;
-    float aspectRation = (float)windowWidth / (float)windowHeight;
 
     // Quary the clock frequency
     LARGE_INTEGER frequency;
@@ -222,7 +38,9 @@ void Demo()
     mc::ShaderManager& sm = engine.GetShaderManager();
 
     // Camera Variables
-    mc::Camera camera(XMFLOAT3(0, 0, -2));
+    mc::Camera camera(XMFLOAT3(0, 0, -2), 0.01f, 100.0f,
+        (60.0f / 180.0f) * XM_PI, (90.0f / 180.0f) * XM_PI,
+        (float)windowWidth / (float)windowHeight);
 
     // Init Shaders
     sm.AddVertexShader("vert", gm, "assets/vertex/vert.hlsl");
@@ -264,17 +82,17 @@ void Demo()
     mc::Text textWrite(gm, 1000, fontTexture, 7, 9, sm.Get("fontVert"), sm.Get("fontPixel"));
 
     // Init a Const Buffer
-    ObjectConstBuffer objectCPUBuffer{};
+    mc::ObjectConstBuffer objectCPUBuffer{};
     objectCPUBuffer.model = XMMatrixIdentity();
-    mc::ConstBuffer<ObjectConstBuffer> objectGPUBuffer(gm, mc::BIND_TO_VS, objectCPUBuffer, 0);
+    mc::ConstBuffer<mc::ObjectConstBuffer> objectGPUBuffer(gm, mc::BIND_TO_VS, objectCPUBuffer, 0);
 
-    CameraConstBuffer cameraCPUBuffer{};
+    mc::CameraConstBuffer cameraCPUBuffer{};
     cameraCPUBuffer.view = camera.GetViewMat();
-    cameraCPUBuffer.proj = XMMatrixPerspectiveFovLH(fovMin, aspectRation, nearPlane, farPlane);
+    cameraCPUBuffer.proj = XMMatrixPerspectiveFovLH(camera.GetFovMin(), camera.GetAspectRatio(), camera.GetNearPlane(), camera.GetFarPlane());
     cameraCPUBuffer.viewPos = camera.GetPosition();
-    mc::ConstBuffer<CameraConstBuffer> cameraGPUBuffer(gm, mc::BIND_TO_VS|mc::BIND_TO_GS, cameraCPUBuffer, 1);
+    mc::ConstBuffer<mc::CameraConstBuffer> cameraGPUBuffer(gm, mc::BIND_TO_VS | mc::BIND_TO_GS, cameraCPUBuffer, 1);
 
-    LightConstBuffer lightCPUBuffer{};
+    mc::LightConstBuffer lightCPUBuffer{};
     lightCPUBuffer.count = 1;
     lightCPUBuffer.lights[0].position = XMFLOAT3(0, 10, 10);
     lightCPUBuffer.lights[0].constant = 1.0f;
@@ -282,15 +100,15 @@ void Demo()
     lightCPUBuffer.lights[0].quadratic = 0.000007;
     lightCPUBuffer.lights[0].ambient = XMFLOAT3(0.025f, 0.025f, 0.025f);
     lightCPUBuffer.lights[0].diffuse = XMFLOAT3(100.0f, 100.0f, 100.0f);
-    lightCPUBuffer.lights[0].specular = XMFLOAT3(60.0f, 60.0f,60.0f);
+    lightCPUBuffer.lights[0].specular = XMFLOAT3(60.0f, 60.0f, 60.0f);
     lightCPUBuffer.viewPos = camera.GetPosition();
-    mc::ConstBuffer<LightConstBuffer> lightGPUBuffer(gm, mc::BIND_TO_PS, lightCPUBuffer, 2);
+    mc::ConstBuffer<mc::LightConstBuffer> lightGPUBuffer(gm, mc::BIND_TO_PS, lightCPUBuffer, 2);
 
-    CommonConstBuffer commonCPUBuffer{};
+    mc::CommonConstBuffer commonCPUBuffer{};
     commonCPUBuffer.resolution = XMFLOAT2(windowWidth, windowHeight);
     commonCPUBuffer.time = 0.0f;
-    mc::ConstBuffer<CommonConstBuffer> commonGPUBuffer(gm, mc::BIND_TO_PS, commonCPUBuffer, 3);
-        
+    mc::ConstBuffer<mc::CommonConstBuffer> commonGPUBuffer(gm, mc::BIND_TO_PS, commonCPUBuffer, 3);
+
     // create the input layout
     mc::InputLayoutDesc desc = {
         {
@@ -301,7 +119,7 @@ void Demo()
         },
         4
     };
-    mc::InputLayout IL(gm, *(mc::VertexShader *)sm.Get("vert"), desc);
+    mc::InputLayout IL(gm, *(mc::VertexShader*)sm.Get("vert"), desc);
 
     // create the input layout for the particle system
     mc::InputLayoutDesc particleILDesc = {
@@ -380,19 +198,19 @@ void Demo()
     mc::Ship shipBody(position, 2.0f, 0.04f);
 
     //Scene test
-    Scene scene(&objectCPUBuffer, &objectGPUBuffer);
+    mc::Scene scene(&objectCPUBuffer, &objectGPUBuffer);
 
     // Create Ship
-    SceneNode& ship = scene.AddNode();
+    mc::SceneNode& ship = scene.AddNode();
     ship.SetMesh(&shipMesh);
     ship.SetTexture(&shipTexture);
     ship.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     ship.SetPixelShader((mc::PixelShader*)sm.Get("ship"));
     ship.SetPosition(position.x, position.y, position.z);
-    ship.SetScale(0.0125f*0.5f, 0.0125f*0.5f, 0.0125f*0.5f);
+    ship.SetScale(0.0125f * 0.5f, 0.0125f * 0.5f, 0.0125f * 0.5f);
 
     // Create meta
-    SceneNode& meta = scene.AddNode();
+    mc::SceneNode& meta = scene.AddNode();
     meta.SetMesh(&metaMesh);
     meta.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     meta.SetPixelShader((mc::PixelShader*)sm.Get("meta"));
@@ -400,7 +218,7 @@ void Demo()
     meta.SetScale(1.0f, 1.0f, 1.0f);
 
     // Create postes
-    SceneNode& postes = scene.AddNode();
+    mc::SceneNode& postes = scene.AddNode();
     postes.SetMesh(&postesMesh);
     postes.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     postes.SetPixelShader((mc::PixelShader*)sm.Get("postes"));
@@ -408,7 +226,7 @@ void Demo()
     postes.SetScale(1.0f, 1.0f, 1.0f);
 
     // Create sun
-    SceneNode& sun = scene.AddNode();
+    mc::SceneNode& sun = scene.AddNode();
     sun.SetMesh(&planetMesh);
     sun.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     sun.SetPixelShader((mc::PixelShader*)sm.Get("sun"));
@@ -416,7 +234,7 @@ void Demo()
     sun.SetScale(10, 10, 10);
 
     // Create the earth
-    SceneNode& earth = scene.AddNode();
+    mc::SceneNode& earth = scene.AddNode();
     earth.SetMesh(&planetMesh);
     earth.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     earth.SetPixelShader((mc::PixelShader*)sm.Get("earth"));
@@ -424,7 +242,7 @@ void Demo()
     earth.SetScale(20, 20, 20);
 
     // Create the mars
-    SceneNode& mars = scene.AddNode();
+    mc::SceneNode& mars = scene.AddNode();
     mars.SetMesh(&planetMesh);
     mars.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     mars.SetPixelShader((mc::PixelShader*)sm.Get("mars"));
@@ -432,7 +250,7 @@ void Demo()
     mars.SetScale(10, 10, 10);
 
     // Create the jupiter
-    SceneNode& jupiter = scene.AddNode();
+    mc::SceneNode& jupiter = scene.AddNode();
     jupiter.SetMesh(&planetMesh);
     jupiter.SetTexture(&jupiterTexture);
     jupiter.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
@@ -441,7 +259,7 @@ void Demo()
     jupiter.SetScale(20, 20, 20);
 
     // create the saturn
-    SceneNode& saturn = jupiter.AddNode();
+    mc::SceneNode& saturn = jupiter.AddNode();
     saturn.SetMesh(&planetMesh);
     saturn.SetTexture(&saturnTexture);
     saturn.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
@@ -454,7 +272,7 @@ void Demo()
     // Add translucid objects
     //////////////////////////////////////
     // Create track base
-    SceneNode& trackBase = scene.AddNode();
+    mc::SceneNode& trackBase = scene.AddNode();
     trackBase.SetMesh(&trackBaseMesh);
     trackBase.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     trackBase.SetPixelShader((mc::PixelShader*)sm.Get("trackBase"));
@@ -462,7 +280,7 @@ void Demo()
     trackBase.SetScale(1, 1, 1);
 
     // Create track inner
-    SceneNode& trackInner = scene.AddNode();
+    mc::SceneNode& trackInner = scene.AddNode();
     trackInner.SetMesh(&trackInnerMesh);
     trackInner.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     trackInner.SetPixelShader((mc::PixelShader*)sm.Get("trackRail"));
@@ -471,7 +289,7 @@ void Demo()
     trackInner.SetCullBack(false);
 
     // Create track outer
-    SceneNode& trackOuter = scene.AddNode();
+    mc::SceneNode& trackOuter = scene.AddNode();
     trackOuter.SetMesh(&trackOuterMesh);
     trackOuter.SetVertexShader((mc::VertexShader*)sm.Get("vert"));
     trackOuter.SetPixelShader((mc::PixelShader*)sm.Get("trackRail"));
@@ -488,7 +306,7 @@ void Demo()
     commonGPUBuffer.Bind(gm);
 
     LARGE_INTEGER lastCounter;
-    QueryPerformanceCounter(&lastCounter); 
+    QueryPerformanceCounter(&lastCounter);
 
     double gameTime = 0.0f;
 
@@ -517,7 +335,7 @@ void Demo()
             shipBody.Update(im, dt, collisionDataArray, 2);
         }
         ship.SetRotation(shipBody.GetOrientation());
-          
+
         XMFLOAT3 shipPos = shipBody.GetPosition();
         ship.SetPosition(shipPos.x, shipPos.y, shipPos.z);
 
@@ -537,14 +355,14 @@ void Demo()
         lightGPUBuffer.Update(gm, lightCPUBuffer);
 
         float shipVel = XMVectorGetX(XMVector3Length(shipBody.GetVelocity()));
-        float fov = Lerp(fovMin, fovMax, std::clamp(shipVel * shipVel, 0.0f, 1.0f));
+        float fov = mc::Utils::Lerp(camera.GetFovMin(), camera.GetFovMax(), std::clamp(shipVel * shipVel, 0.0f, 1.0f));
 
         // Update the camera const buffer
         cameraCPUBuffer.view = camera.GetViewMat();
-        cameraCPUBuffer.proj = XMMatrixPerspectiveFovLH(fov, aspectRation, nearPlane, farPlane);
+        cameraCPUBuffer.proj = XMMatrixPerspectiveFovLH(fov, camera.GetAspectRatio(), camera.GetNearPlane(), camera.GetFarPlane());
         cameraCPUBuffer.viewPos = camera.GetPosition();
         cameraGPUBuffer.Update(gm, cameraCPUBuffer);
-        
+
         XMVECTOR sunWorld = XMVector4Transform(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), sun.GetModelMatrix());
         XMVECTOR sunView = XMVector4Transform(sunWorld, cameraCPUBuffer.view);
         XMVECTOR sunScreen = XMVector4Transform(sunView, cameraCPUBuffer.proj);
@@ -564,15 +382,15 @@ void Demo()
             screenPos.y += hWindowHeight;
 
             float nx = screenPos.x / windowWidth;
-            float x0 = std::clamp(Remap(nx, 0.0f, 0.2f, 0.0f, 1.0f), 0.0f, 1.0f);
-            float x1 = std::clamp(Remap(1.0f - nx, 0.0f, 0.2f, 0.0f, 1.0f), 0.0f, 1.0f);
+            float x0 = std::clamp(mc::Utils::Remap(nx, 0.0f, 0.2f, 0.0f, 1.0f), 0.0f, 1.0f);
+            float x1 = std::clamp(mc::Utils::Remap(1.0f - nx, 0.0f, 0.2f, 0.0f, 1.0f), 0.0f, 1.0f);
             float x = x0 * x1;
             float ny = screenPos.y / windowHeight;
-            float y0 = std::clamp(Remap(ny, 0.0f, 0.1f, 0.0f, 1.0f), 0.0f, 1.0f);
-            float y1 = std::clamp(Remap(1.0f - ny, 0.0f, 0.1f, 0.0f, 1.0f), 0.0f, 1.0f);
+            float y0 = std::clamp(mc::Utils::Remap(ny, 0.0f, 0.1f, 0.0f, 1.0f), 0.0f, 1.0f);
+            float y1 = std::clamp(mc::Utils::Remap(1.0f - ny, 0.0f, 0.1f, 0.0f, 1.0f), 0.0f, 1.0f);
             float y = y0 * y1;
             commonCPUBuffer.screenPos = XMFLOAT2(screenPos.x, screenPos.y);
-            commonCPUBuffer.flerActive.x = x*y;
+            commonCPUBuffer.flerActive.x = x * y;
         }
         else
         {
@@ -587,23 +405,23 @@ void Demo()
         XMStoreFloat3(&emitDir, shipBody.GetForward() * -1.0);
         XMFLOAT3 startVel;
         XMStoreFloat3(&startVel, shipBody.GetVelocity());
-        particleSystem.Update(shipBody.GetPosition(), startVel, emitDir, camera.GetPosition(), gameTime, dt, shipBody.GetThrust()/shipBody.GetThrustMax());
+        particleSystem.Update(shipBody.GetPosition(), startVel, emitDir, camera.GetPosition(), gameTime, dt, shipBody.GetThrust() / shipBody.GetThrustMax());
 
         msaaBuffer.Bind(gm);
         msaaBuffer.Clear(gm, 0.1f, 0.1f, 0.3f);
-       
+
         gm.SetRasterizerStateCullBack();
         // Draw sky
         {
             // Compute the sky coord system so is always facing the camera
             // Compute the scale so the quad fill the screen 
-            float a = (farPlane * 0.5f);
+            float a = (camera.GetFarPlane() * 0.5f);
             float ys = (std::tanf(fov * 0.5f) * a) * 2.0f;
-            float xs = ys * aspectRation;
+            float xs = ys * camera.GetAspectRatio();
 
             XMVECTOR viewDir = camera.GetFront();
             XMMATRIX translationMat = XMMatrixTranslationFromVector(XMLoadFloat3(&camera.GetPosition()) + (viewDir * a));
-            XMMATRIX rotationMat = 
+            XMMATRIX rotationMat =
                 XMMATRIX(camera.GetRight(), camera.GetUp(), camera.GetFront(), XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f));
             XMMATRIX scaleMat = XMMatrixScaling(xs, ys, 1.0f);
 
@@ -614,8 +432,8 @@ void Demo()
             gm.SetDepthStencilOff();
             quad.Draw(gm);
         }
-        
-        
+
+
         gm.SetDepthStencilOn();
         scene.Draw(gm);
 
@@ -672,7 +490,7 @@ void Demo()
             }
         }
 
-        
+
         // Draw to backBuffer
         {
             gm.BindBackBuffer();
@@ -688,9 +506,25 @@ void Demo()
 
         // Draw text
         {
-            
-            textWrite.Write(gm, "FPS: " + std::to_string((int)(1.0f/dt)), -windowWidth*0.5f, windowHeight*0.5, 7 * 4, 9 * 4);
-            textWrite.Write(gm, "Time: " + std::to_string(gameTime), -windowWidth * 0.5f, (windowHeight * 0.5) - 9 * 4, 7 * 4, 9 * 4);
+
+            textWrite.Write(gm, "FPS: " + std::to_string((int)(1.0f / dt)), -windowWidth * 0.5f, windowHeight * 0.5, 7 * 2, 9 * 2);
+
+            static float seconds = 0;
+            static int minutes = 0;
+            static int hours = 0;
+            if (seconds >= 60.0f)
+            {
+                minutes++;
+                seconds = 0.0f;
+            }
+            if (minutes >= 60.0f)
+            {
+                hours++;
+                minutes = 0;
+            }
+            std::string time = std::to_string(hours) + ":" + std::to_string(minutes) + ":" + std::to_string(seconds);
+            seconds += dt;
+            textWrite.Write(gm, "Time: " + time, -windowWidth * 0.5f, (windowHeight * 0.5) - 9 * 2, 7 * 2, 9 * 2);
 
 
             textWrite.Render(gm);
@@ -704,16 +538,4 @@ void Demo()
     }
 }
 
-int main()
-{
-    try
-    {
-        srand(time(0));
-        Demo();
-    }
-    catch (std::exception& e)
-    {
-        std::cout << "Error: " << e.what() << "\n";
-    }
-    return 0;
-}
+*/

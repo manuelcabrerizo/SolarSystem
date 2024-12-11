@@ -58,4 +58,21 @@ namespace mc
 
     }
 
+    float Utils::Lerp(float a, float b, float t)
+    {
+        return (1.0f - t) * a + b * t;
+    }
+
+    float Utils::InverseLerp(float a, float b, float v)
+    {
+        return (v - a) / (b - a);
+    }
+
+    float Utils::Remap(float v, float inMin, float inMax, float outMin, float outMax)
+    {
+        float t = InverseLerp(inMin, inMax, v);
+        return Lerp(outMin, outMax, t);
+
+    }
+
 }

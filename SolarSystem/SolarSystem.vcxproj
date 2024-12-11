@@ -150,6 +150,7 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="FrameBuffer.cpp" />
+    <ClCompile Include="Game.cpp" />
     <ClCompile Include="GeometryGenerator.cpp" />
     <ClCompile Include="GeometryShader.cpp" />
     <ClCompile Include="GraphicsManager.cpp" />
@@ -161,6 +162,7 @@
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="ParticleSystem.cpp" />
     <ClCompile Include="PixelShader.cpp" />
+    <ClCompile Include="Scene.cpp" />
     <ClCompile Include="ShaderManager.cpp" />
     <ClCompile Include="Ship.cpp" />
     <ClCompile Include="Text.cpp" />
@@ -175,6 +177,8 @@
     <ClInclude Include="ConstBuffer.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="FrameBuffer.h" />
+    <ClInclude Include="Game.h" />
+    <ClInclude Include="GameConstBuffers.h" />
     <ClInclude Include="GeometryGenerator.h" />
     <ClInclude Include="GeometryShader.h" />
     <ClInclude Include="GraphicsManager.h" />
@@ -186,6 +190,7 @@
     <ClInclude Include="ParticleSystem.h" />
     <ClInclude Include="PixelShader.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Scene.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="ShaderManager.h" />
     <ClInclude Include="Ship.h" />

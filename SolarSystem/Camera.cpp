@@ -2,8 +2,13 @@
 #include "Ship.h"
 namespace mc
 {
-    Camera::Camera(const XMFLOAT3& position)
-        : position_(position), rot_(XMFLOAT3(0.0f, 0.f,0.0f))
+    Camera::Camera(const XMFLOAT3& position,
+                   float nearPlane, float farPlane,
+                   float fovMin, float fovMax,
+                   float aspectRation)
+        : position_(position), rot_(XMFLOAT3(0.0f, 0.f,0.0f)),
+          nearPlane_(nearPlane),  farPlane_(farPlane), fovMin_(fovMin), fovMax_(fovMax),
+          aspectRation_(aspectRation)
     {
         worldUp_ = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
         front_ = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
