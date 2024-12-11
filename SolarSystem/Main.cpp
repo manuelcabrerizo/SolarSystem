@@ -203,7 +203,7 @@ float Remap(float v, float inMin, float inMax, float outMin, float outMax)
 
 void Demo()
 {
-    bool freeMode = true;
+    bool freeMode = false;
 
     // Camera variables
     float nearPlane = 0.01f;
@@ -252,11 +252,11 @@ void Demo()
     mc::Texture shipTexture(gm, "assets/textures/Overtone_Default_Diffuse.png");
     mc::Texture jupiterTexture(gm, "assets/textures/planet.png");
     mc::Texture saturnTexture(gm, "assets/textures/planet2.png");
-    mc::Texture lavaTexture(gm, "assets/textures/Lava.png");
+    mc::Texture thrustTexture(gm, "assets/textures/neon.png");
 
     // Create the particle system
-    mc::ParticleSystem particleSystem(gm, 2000, sm.Get("soFireVer"), sm.Get("soFireGeo"),
-        sm.Get("dwFireVer"), sm.Get("dwFirePix"), sm.Get("dwFireGeo"), lavaTexture);
+    mc::ParticleSystem particleSystem(gm, 1000, sm.Get("soFireVer"), sm.Get("soFireGeo"),
+        sm.Get("dwFireVer"), sm.Get("dwFirePix"), sm.Get("dwFireGeo"), thrustTexture);
 
 
     // Init a Const Buffer
@@ -278,7 +278,7 @@ void Demo()
     lightCPUBuffer.lights[0].quadratic = 0.000007;
     lightCPUBuffer.lights[0].ambient = XMFLOAT3(0.025f, 0.025f, 0.025f);
     lightCPUBuffer.lights[0].diffuse = XMFLOAT3(100.0f, 100.0f, 100.0f);
-    lightCPUBuffer.lights[0].specular = XMFLOAT3(140.0f, 140.0f,140.0f);
+    lightCPUBuffer.lights[0].specular = XMFLOAT3(60.0f, 60.0f,60.0f);
     lightCPUBuffer.viewPos = camera.GetPosition();
     mc::ConstBuffer<LightConstBuffer> lightGPUBuffer(gm, mc::BIND_TO_PS, lightCPUBuffer, 2);
 
@@ -594,8 +594,11 @@ void Demo()
         commonGPUBuffer.Update(gm, commonCPUBuffer);
 
         // Update the particle system
-        particleSystem.Update(XMFLOAT3(0, 0, 0), XMFLOAT3(0, 0, 0), camera.GetPosition(), gameTime, dt);
-
+        XMFLOAT3 emitDir;
+        XMStoreFloat3(&emitDir, shipBody.GetForward() * -1.0);
+        XMFLOAT3 startVel;
+        XMStoreFloat3(&startVel, shipBody.GetVelocity());
+        particleSystem.Update(shipBody.GetPosition(), startVel, emitDir, camera.GetPosition(), gameTime, dt, shipBody.GetThrust()/shipBody.GetThrustMax());
 
         msaaBuffer.Bind(gm);
         msaaBuffer.Clear(gm, 0.1f, 0.1f, 0.3f);

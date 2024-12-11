@@ -23,7 +23,7 @@ namespace mc
             static_cast<float>(window.Height())
         );
         BindBackBuffer();
-        SetSamplerLinear();
+        SetSamplerLinearClamp();
     }
 
 
@@ -152,38 +152,36 @@ namespace mc
 
     void GraphicsManager::CreateSamplerStates()
     {
-        // D3D11_TEXTURE_ADDRESS_CLAMP; D3D11_TEXTURE_ADDRESS_WRAP;
         D3D11_SAMPLER_DESC colorMapDesc{};
-        colorMapDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-        colorMapDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-        colorMapDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-        colorMapDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-        colorMapDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-        colorMapDesc.MaxLOD = D3D11_FLOAT32_MAX;
-        if (FAILED(device_->CreateSamplerState(&colorMapDesc, &samplerStatePoint_)))
-        {
-            throw std::runtime_error("Error: Failed Creating sampler state Point\n");
-        }
         colorMapDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
         colorMapDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
         colorMapDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+        colorMapDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
         colorMapDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-        if (FAILED(device_->CreateSamplerState(&colorMapDesc, &samplerStateLinear_)))
+        colorMapDesc.MaxLOD = D3D11_FLOAT32_MAX;
+        if (FAILED(device_->CreateSamplerState(&colorMapDesc, &samplerStateLinearClamp_)))
+        {
+            throw std::runtime_error("Error: Failed Creating sampler state Point\n");
+        }
+        colorMapDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+        colorMapDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+        colorMapDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+        if (FAILED(device_->CreateSamplerState(&colorMapDesc, &samplerStateLinearWrap_)))
         {
             throw std::runtime_error("Error: Failed Creating sampler state Linear\n");
         }
     }
 
-    void GraphicsManager::SetSamplerLinear() const
+    void GraphicsManager::SetSamplerLinearClamp() const
     {
-        deviceContext_->PSSetSamplers(0, 1, samplerStateLinear_.GetAddressOf());
-        deviceContext_->GSSetSamplers(0, 1, samplerStateLinear_.GetAddressOf());
+        deviceContext_->PSSetSamplers(0, 1, samplerStateLinearClamp_.GetAddressOf());
+        deviceContext_->GSSetSamplers(0, 1, samplerStateLinearClamp_.GetAddressOf());
     }
 
-    void GraphicsManager::SetSamplerPoint() const
+    void GraphicsManager::SetSamplerLinearWrap() const
     {
-        deviceContext_->PSSetSamplers(0, 1, samplerStatePoint_.GetAddressOf());
-        deviceContext_->GSSetSamplers(0, 1, samplerStatePoint_.GetAddressOf());
+        deviceContext_->PSSetSamplers(0, 1, samplerStateLinearWrap_.GetAddressOf());
+        deviceContext_->GSSetSamplers(0, 1, samplerStateLinearWrap_.GetAddressOf());
     }
 
     void GraphicsManager::CreateRasterizerStates()

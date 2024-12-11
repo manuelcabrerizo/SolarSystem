@@ -15,7 +15,7 @@ namespace mc
         : maxParticles_(maxParticles), firstRun_(true), texture_(texture),
         soVShader_(soVShader), soGShader_(soGShader),
         dwVShader_(dwVShader), dwPShader_(dwPShader), dwGShader_(dwGShader),
-        constBuffer_(gm, BIND_TO_GS, particleConstBuffer, 5)
+        constBuffer_(gm, BIND_TO_GS|BIND_TO_VS|BIND_TO_PS, particleConstBuffer, 5)
     {
         CreateVertexBuffer(gm);
         CreateRandomTexture(gm);
@@ -40,14 +40,16 @@ namespace mc
         age_ = 0.0f;
     }
 
-    void ParticleSystem::Update(XMFLOAT3 startPos, XMFLOAT3 targetPos, XMFLOAT3 cameraPos, float gameTime, float dt)
+    void ParticleSystem::Update(XMFLOAT3 startPos, XMFLOAT3 startVel, XMFLOAT3 emitDir, XMFLOAT3 cameraPos, float gameTime, float dt, float thrust)
     {
         eyePosW_ = cameraPos;
-        targetPosW_ = targetPos;
         emitPosW_ = startPos;
         gameTime_ = gameTime;
         timeStep_ = dt;
         age_ += dt;
+        emitDirW_ = emitDir;
+        starVerlocity_ = startVel;
+        thrust_ = thrust;
     }
 
     void ParticleSystem::Draw(const GraphicsManager& gm)
@@ -57,11 +59,12 @@ namespace mc
         particleConstBuffer.eyePosW = eyePosW_;
         particleConstBuffer.emitPosW = emitPosW_;
         particleConstBuffer.emitDirW = emitDirW_;
-        particleConstBuffer.targetPosW = targetPosW_;
+        particleConstBuffer.starVelocity = starVerlocity_;
+        particleConstBuffer.thrust = thrust_;
         constBuffer_.Update(gm, particleConstBuffer);
 
         gm.SetDepthStencilOff();
-        gm.SetSamplerPoint();
+        gm.SetSamplerLinearWrap();
         GetDeviceContext(gm)->GSSetShaderResources(0, 1, randomTextureSRV_.GetAddressOf());
         GetDeviceContext(gm)->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
         soVShader_->Bind(gm);
@@ -117,7 +120,7 @@ namespace mc
 
        
         // reset the state
-        gm.SetSamplerLinear();
+        gm.SetSamplerLinearClamp();
         gm.SetAlphaBlending();
         gm.SetDepthStencilOn();
         GetDeviceContext(gm)->VSSetShader(nullptr, 0, 0);
@@ -139,7 +142,6 @@ namespace mc
         // of the particle attribute do not apply to the emitter
         VertexParticle p;
         ZeroMemory(&p, sizeof(VertexParticle));
-        p.sizeW = XMFLOAT2(2.0f, 2.0f);
         p.age = 0;
         p.type = 0;
 

@@ -27,8 +27,8 @@ namespace mc
         XMFLOAT3 emitPosW;
         float timeStep;
         XMFLOAT3 emitDirW;
-        float pad0;
-        XMFLOAT3 targetPosW;
+        float thrust;
+        XMFLOAT3 starVelocity;
         float pad1;
     };
 
@@ -45,7 +45,7 @@ namespace mc
             Shader *dwVShader, Shader *dwPShader, Shader *dwGShader,
             Texture& texture);
         void Reset();
-        void Update(XMFLOAT3 startPos, XMFLOAT3 targetPos, XMFLOAT3 cameraPos, float gameTime_, float dt);
+        void Update(XMFLOAT3 startPos, XMFLOAT3 starVel, XMFLOAT3 emitDir, XMFLOAT3 cameraPos, float gameTime_, float dt, float thrust);
         void Draw(const GraphicsManager& gm);
     private:
         void CreateVertexBuffer(const GraphicsManager& gm);
@@ -57,11 +57,12 @@ namespace mc
         float timeStep_{ 0.0f };
         float age_{ 0.0f };
         float gameTime_{ 0.0f };
+        float thrust_{ 0.0f };
 
         XMFLOAT3 eyePosW_{ 0.0f, 0.0f, 0.0f };
-        XMFLOAT3 targetPosW_{ 0.0f, 0.0f, 0.0f };
         XMFLOAT3 emitPosW_{ 0.0f, 0.0f, 0.0f };
         XMFLOAT3 emitDirW_{ 0.0f, 1.0f, 0.0f };
+        XMFLOAT3 starVerlocity_{ 0.0f, 0.0f, 0.0f };
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> initVB_;
         ID3D11Buffer *drawVB_;

@@ -24,8 +24,8 @@ namespace mc
         void SetViewport(float x, float y, float width, float height) const;
         void BindBackBuffer();
 
-        void SetSamplerLinear() const;
-        void SetSamplerPoint() const;
+        void SetSamplerLinearClamp() const;
+        void SetSamplerLinearWrap() const;
 
         void SetRasterizerStateCullBack() const;
         void SetRasterizerStateCullFront() const;
@@ -56,8 +56,8 @@ namespace mc
         Microsoft::WRL::ComPtr<ID3D11RenderTargetView> renderTargetView_;
         Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthStencilView_;
 
-        Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerStateLinear_;
-        Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerStatePoint_;
+        Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerStateLinearClamp_;
+        Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerStateLinearWrap_;
 
         Microsoft::WRL::ComPtr<ID3D11RasterizerState> wireFrameRasterizer_;
         Microsoft::WRL::ComPtr<ID3D11RasterizerState> fillRasterizerCullBack_;
