@@ -240,7 +240,10 @@ namespace mc
 
     void FrameBuffer::Resolve(const GraphicsManager& gm)
     {
-        GetDeviceContext(gm)->ResolveSubresource(resolveTexture_.Get(), 0, texture_.Get(), 0, format_);
+        if (msaa_ > 1)
+        {
+            GetDeviceContext(gm)->ResolveSubresource(resolveTexture_.Get(), 0, texture_.Get(), 0, format_);
+        }
     }
 
 }

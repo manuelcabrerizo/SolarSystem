@@ -5,7 +5,7 @@ using namespace DirectX;
 namespace mc
 {
     Game::Game()
-        : ship(XMFLOAT3(-2.5, 0.0125f, 0), 2.0f, 0.04f)
+        : ship(XMFLOAT3(-2.5, 0.0125f, 0), 2.0f, 0.04f), currentCheckPoint(0)
     {
         // Initialize the engine and get pointer to the main systems
         engine = std::make_unique<Engine>("Solar System Racing", windowWidth, windowHeight);
@@ -38,6 +38,7 @@ namespace mc
         QueryPerformanceFrequency(&frequency);
         QueryPerformanceCounter(&lastCounter);
         gameTime = 0.0;
+        timeScale = 1.0f;
 
         // Set initial state
         gm->SetAlphaBlending();
@@ -50,228 +51,42 @@ namespace mc
 
     void Game::Run()
     {
-        bool freeMode = false;
         while (engine->IsRunning())
         {
-            if (im->KeyJustDown(mc::KEY_1))
-            {
-                freeMode = !freeMode;
-            }
-
+            // Calculates the deltaTime for this frame
             LARGE_INTEGER currentCounter;
             QueryPerformanceCounter(&currentCounter);
             double lastTime = (double)lastCounter.QuadPart / frequency.QuadPart;
             double currentTime = (double)currentCounter.QuadPart / frequency.QuadPart;
-            float dt = static_cast<float>(currentTime - lastTime);
+            float dt = static_cast<float>(currentTime - lastTime) * timeScale;
 
+            // this is to compile the shaders in execution time
+            // it check if one of the shaders have been modify and recompile it
             sm->HotReaload(*gm);
 
-            mc::CollisionData* collisionDataArray[] = {
-                &collisionDataOuter,
-                &collisionDataInner
-            };
+            // Process the ship and camera movement
+            UpdateShip(dt);
+            camera->FollowShip(ship);
 
-            if (freeMode == false)
-            {
-                ship.Update(*im, dt, collisionDataArray, 2);
-            }
-            shipNode->SetRotation(ship.GetOrientation());
-
-            XMFLOAT3 shipPos = ship.GetPosition();
-            shipNode->SetPosition(shipPos.x, shipPos.y, shipPos.z);
-
-            if (freeMode)
-            {
-                camera->Update(*im, dt);
-            }
-            else
-            {
-                camera->FollowShip(ship);
-            }
-
-            XMFLOAT3 sunPosition;
-            XMStoreFloat3(&sunPosition, sun->GetPosition());
-            lightCPUBuffer.lights[0].position = sunPosition;
-            lightCPUBuffer.viewPos = camera->GetPosition();
-            lightGPUBuffer->Update(*gm, lightCPUBuffer);
-
+            UpdateShipLapsAndTimes(dt);
+            
             float shipVel = XMVectorGetX(XMVector3Length(ship.GetVelocity()));
             float fov = mc::Utils::Lerp(camera->GetFovMin(), camera->GetFovMax(), std::clamp(shipVel * shipVel, 0.0f, 1.0f));
+            // Update the values of all the const buffers / uniforms for the demo
+            UpdateConstBuffers(dt, fov);
+            // Update the particle system for the ship
+            UpdateParticleSystem(dt);
 
-            // Update the camera const buffer
-            cameraCPUBuffer.view = camera->GetViewMat();
-            cameraCPUBuffer.proj = XMMatrixPerspectiveFovLH(fov, camera->GetAspectRatio(), camera->GetNearPlane(), camera->GetFarPlane());
-            cameraCPUBuffer.viewPos = camera->GetPosition();
-            cameraGPUBuffer->Update(*gm, cameraCPUBuffer);
+            // Draw the entire 3d scene to a off screen buffer
+            Draw3DScene(fov);
 
-            XMVECTOR sunWorld = XMVector4Transform(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), sun->GetModelMatrix());
-            XMVECTOR sunView = XMVector4Transform(sunWorld, cameraCPUBuffer.view);
-            XMVECTOR sunScreen = XMVector4Transform(sunView, cameraCPUBuffer.proj);
-            XMFLOAT4 screenPos;
-            XMStoreFloat4(&screenPos, sunScreen);
-            if (screenPos.x >= -screenPos.w && screenPos.x <= screenPos.w &&
-                screenPos.y >= -screenPos.w && screenPos.y <= screenPos.w &&
-                screenPos.z >= -screenPos.w && screenPos.z <= screenPos.w)
-            {
-                float hWindowWidth = windowWidth * 0.5f;
-                float hWindowHeight = windowHeight * 0.5f;
-                screenPos.x /= screenPos.w;
-                screenPos.y /= screenPos.w;
-                screenPos.x *= hWindowWidth;
-                screenPos.y *= hWindowHeight;
-                screenPos.x += hWindowWidth;
-                screenPos.y += hWindowHeight;
+            // Draw the off screen buffer and appply post process effects
+            Begin2DMode();
+            DrawBloom();
+            DrawPostProcess();
+            DrawUI(dt);
 
-                float nx = screenPos.x / windowWidth;
-                float x0 = std::clamp(mc::Utils::Remap(nx, 0.0f, 0.2f, 0.0f, 1.0f), 0.0f, 1.0f);
-                float x1 = std::clamp(mc::Utils::Remap(1.0f - nx, 0.0f, 0.2f, 0.0f, 1.0f), 0.0f, 1.0f);
-                float x = x0 * x1;
-                float ny = screenPos.y / windowHeight;
-                float y0 = std::clamp(mc::Utils::Remap(ny, 0.0f, 0.1f, 0.0f, 1.0f), 0.0f, 1.0f);
-                float y1 = std::clamp(mc::Utils::Remap(1.0f - ny, 0.0f, 0.1f, 0.0f, 1.0f), 0.0f, 1.0f);
-                float y = y0 * y1;
-                commonCPUBuffer.screenPos = XMFLOAT2(screenPos.x, screenPos.y);
-                commonCPUBuffer.flerActive.x = x * y;
-            }
-            else
-            {
-                commonCPUBuffer.flerActive.x = 0.0f;
-            }
-
-            commonCPUBuffer.time += dt;
-            commonGPUBuffer->Update(*gm, commonCPUBuffer);
-
-            // Update the particle system
-            XMFLOAT3 emitDir;
-            XMStoreFloat3(&emitDir, ship.GetForward() * -1.0);
-            XMFLOAT3 startVel;
-            XMStoreFloat3(&startVel, ship.GetVelocity());
-            particleSystem->Update(ship.GetPosition(), startVel, emitDir, camera->GetPosition(), gameTime, dt, ship.GetThrust() / ship.GetThrustMax());
-
-            msaaBuffer->Bind(*gm);
-            msaaBuffer->Clear(*gm, 0.1f, 0.1f, 0.3f);
-
-            gm->SetRasterizerStateCullBack();
-            // Draw sky
-            {
-                // Compute the sky coord system so is always facing the camera
-                // Compute the scale so the quad fill the screen 
-                float a = (camera->GetFarPlane() * 0.5f);
-                float ys = (std::tanf(fov * 0.5f) * a) * 2.0f;
-                float xs = ys * camera->GetAspectRatio();
-
-                XMVECTOR viewDir = camera->GetFront();
-                XMMATRIX translationMat = XMMatrixTranslationFromVector(XMLoadFloat3(&camera->GetPosition()) + (viewDir * a));
-                XMMATRIX rotationMat =
-                    XMMATRIX(camera->GetRight(), camera->GetUp(), camera->GetFront(), XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f));
-                XMMATRIX scaleMat = XMMatrixScaling(xs, ys, 1.0f);
-
-                objectCPUBuffer.model = scaleMat * rotationMat * translationMat;
-                objectGPUBuffer->Update(*gm, objectCPUBuffer);
-
-                sm->Get("skybox")->Bind(*gm);
-                gm->SetDepthStencilOff();
-                quadMesh->Draw(*gm);
-            }
-
-
-            gm->SetDepthStencilOn();
-            scene->Draw(*gm);
-
-            particleIL->Bind(*gm);
-            particleSystem->Draw(*gm);
-            sm->Get("vert")->Bind(*gm);
-
-
-            msaaBuffer->Resolve(*gm);
-
-            gm->SetRasterizerStateCullBack();
-            objectCPUBuffer.model = XMMatrixScaling(static_cast<float>(windowWidth), static_cast<float>(windowHeight), 1.0f);
-            cameraCPUBuffer.view = XMMatrixIdentity();
-            cameraCPUBuffer.proj = XMMatrixOrthographicLH(windowWidth, windowHeight, -1, 100);
-            objectGPUBuffer->Update(*gm, objectCPUBuffer);
-            cameraGPUBuffer->Update(*gm, cameraCPUBuffer);
-
-            // Draw to bloom selector buffer
-            {
-                bloom0Buffer->Bind(*gm);
-                bloom0Buffer->Clear(*gm, 0.0f, 0.0f, 0.0f);
-                sm->Get("bloomSelector")->Bind(*gm);
-                msaaBuffer->BindAsTexture(*gm, 0);
-                quadMesh->Draw(*gm);
-                msaaBuffer->UnbindAsTexture(*gm, 0);
-            }
-
-            // Bloom
-            for (int i = 0; i < 5; i++)
-            {
-                // make horizontal the bloom
-                {
-                    commonCPUBuffer.pad0 = 1.0f;
-                    commonGPUBuffer->Update(*gm, commonCPUBuffer);
-
-                    bloom1Buffer->Bind(*gm);
-                    bloom1Buffer->Clear(*gm, 0.0f, 0.0f, 0.0f);
-                    sm->Get("bloom")->Bind(*gm);
-                    bloom0Buffer->BindAsTexture(*gm, 0);
-                    quadMesh->Draw(*gm);
-                    bloom0Buffer->UnbindAsTexture(*gm, 0);
-                }
-                // make vertical the bloom
-                {
-                    commonCPUBuffer.pad0 = 0.0f;
-                    commonGPUBuffer->Update(*gm, commonCPUBuffer);
-
-                    bloom0Buffer->Bind(*gm);
-                    bloom0Buffer->Clear(*gm, 0.0f, 0.0f, 0.0f);
-                    sm->Get("bloom")->Bind(*gm);
-                    bloom1Buffer->BindAsTexture(*gm, 0);
-                    quadMesh->Draw(*gm);
-                    bloom1Buffer->UnbindAsTexture(*gm, 0);
-                }
-            }
-
-
-            // Draw to backBuffer
-            {
-                gm->BindBackBuffer();
-                gm->Clear(0.3f, 0.1f, 0.1f);
-                sm->Get("postProcess")->Bind(*gm);
-                msaaBuffer->BindAsTexture(*gm, 0);
-                bloom0Buffer->BindAsTexture(*gm, 1);
-                quadMesh->Draw(*gm);
-                bloom0Buffer->UnbindAsTexture(*gm, 1);
-                msaaBuffer->UnbindAsTexture(*gm, 0);
-
-            }
-
-            // Draw text
-            {
-
-                text->Write(*gm, "FPS: " + std::to_string((int)(1.0f / dt)), -windowWidth * 0.5f, windowHeight * 0.5, 7 * 2, 9 * 2);
-
-                static float seconds = 0;
-                static int minutes = 0;
-                static int hours = 0;
-                if (seconds >= 60.0f)
-                {
-                    minutes++;
-                    seconds = 0.0f;
-                }
-                if (minutes >= 60.0f)
-                {
-                    hours++;
-                    minutes = 0;
-                }
-                std::string time = std::to_string(hours) + ":" + std::to_string(minutes) + ":" + std::to_string(seconds);
-                seconds += dt;
-                text->Write(*gm, "Time: " + time, -windowWidth * 0.5f, (windowHeight * 0.5) - 9 * 2, 7 * 2, 9 * 2);
-
-
-                text->Render(*gm);
-                sm->Get("vert")->Bind(*gm);
-            }
-
+            // Present the final image to the user
             gm->Present();
 
             lastCounter = currentCounter;
@@ -431,7 +246,7 @@ namespace mc
 
     void Game::LoadFrameBuffers()
     {
-        msaaBuffer = std::make_unique<FrameBuffer>(*gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, true, 8);
+        msaaBuffer = std::make_unique<FrameBuffer>(*gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, true, 4);
         bloom0Buffer = std::make_unique<FrameBuffer>(*gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
         bloom1Buffer = std::make_unique<FrameBuffer>(*gm, 0, 0, windowWidth, windowHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
     }
@@ -537,6 +352,263 @@ namespace mc
         trackOuter.SetPosition(0, 0, 0);
         trackOuter.SetScale(1, 1, 1);
         trackOuter.SetCullBack(false);
+    }
+
+
+    void Game::UpdateShip(float dt)
+    {
+        // Pass the collision information to the ship update
+        mc::CollisionData* collisionDataArray[] = {
+            &collisionDataOuter,
+            &collisionDataInner
+        };
+        ship.Update(*im, dt, collisionDataArray, 2);
+        // Update the ShipNode of the scene to render it in the new location and orientation
+        shipNode->SetRotation(ship.GetOrientation());
+        XMFLOAT3 shipPos = ship.GetPosition();
+        shipNode->SetPosition(shipPos.x, shipPos.y, shipPos.z);
+    }
+
+    void Game::UpdateShipLapsAndTimes(float dt)
+    {
+        static float checkpoints[8] = {
+            0.0f, 45.0f, 90.0f, 135.0f, 180.0f, 225.0f, 270.0f, 315.0f 
+        };
+
+        XMFLOAT3 shipPos = ship.GetPosition();
+        XMFLOAT3 trackCenter = XMFLOAT3(0.0f, shipPos.y, 0.0f);
+        XMFLOAT2 shipRel(shipPos.x - trackCenter.x, shipPos.z - trackCenter.z);
+        float len = std::sqrtf(shipRel.x * shipRel.x + shipRel.y * shipRel.y);
+        shipRel.x /= len;
+        shipRel.y /= len;
+        float angle = (std::atan2f(shipRel.x, shipRel.y) / XM_PI) * 180.0f;
+        if (angle < 0.0f)
+        {
+            angle += 360.0f;
+        }
+        for (int i = 0; i < 7; i++)
+        {
+            float a = checkpoints[i + 0];
+            float b = checkpoints[i + 1];
+            if (angle >= a && angle <= b)
+            {
+                if ((currentCheckPoint == i) && (lastFrameAngle < angle))
+                {
+                    currentCheckPoint = i + 1;
+
+                    if (!lapsStart)
+                    {
+                        lapsStart = true;
+                    }
+                }
+
+                if ((i == 0) && (currentCheckPoint == 7))
+                {
+                    currentCheckPoint = 0;
+                    lastLapTime = currentLapTime;
+                    if ((currentLapTime < bestLapTime) || firstLap)
+                    {
+                        bestLapTime = currentLapTime;
+                        firstLap = false;
+                    }
+                    currentLapTime = 0.0f;
+                }
+
+            }
+
+        }
+        lastFrameAngle = angle;
+
+        if (lapsStart)
+        {
+            currentLapTime += dt;
+        }
+    }
+
+    void Game::UpdateConstBuffers(float dt, float fov)
+    {
+        XMFLOAT3 sunPosition;
+        XMStoreFloat3(&sunPosition, sun->GetPosition());
+        lightCPUBuffer.lights[0].position = sunPosition;
+        lightCPUBuffer.viewPos = camera->GetPosition();
+        lightGPUBuffer->Update(*gm, lightCPUBuffer);
+
+        // Update the camera const buffer
+        cameraCPUBuffer.view = camera->GetViewMat();
+        cameraCPUBuffer.proj = XMMatrixPerspectiveFovLH(fov, camera->GetAspectRatio(), camera->GetNearPlane(), camera->GetFarPlane());
+        cameraCPUBuffer.viewPos = camera->GetPosition();
+        cameraGPUBuffer->Update(*gm, cameraCPUBuffer);
+
+        XMVECTOR sunWorld = XMVector4Transform(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), sun->GetModelMatrix());
+        XMVECTOR sunView = XMVector4Transform(sunWorld, cameraCPUBuffer.view);
+        XMVECTOR sunScreen = XMVector4Transform(sunView, cameraCPUBuffer.proj);
+        XMFLOAT4 screenPos;
+        XMStoreFloat4(&screenPos, sunScreen);
+        if (screenPos.x >= -screenPos.w && screenPos.x <= screenPos.w &&
+            screenPos.y >= -screenPos.w && screenPos.y <= screenPos.w &&
+            screenPos.z >= -screenPos.w && screenPos.z <= screenPos.w)
+        {
+            float hWindowWidth = windowWidth * 0.5f;
+            float hWindowHeight = windowHeight * 0.5f;
+            screenPos.x /= screenPos.w;
+            screenPos.y /= screenPos.w;
+            screenPos.x *= hWindowWidth;
+            screenPos.y *= hWindowHeight;
+            screenPos.x += hWindowWidth;
+            screenPos.y += hWindowHeight;
+
+            float nx = screenPos.x / windowWidth;
+            float x0 = std::clamp(mc::Utils::Remap(nx, 0.0f, 0.2f, 0.0f, 1.0f), 0.0f, 1.0f);
+            float x1 = std::clamp(mc::Utils::Remap(1.0f - nx, 0.0f, 0.2f, 0.0f, 1.0f), 0.0f, 1.0f);
+            float x = x0 * x1;
+            float ny = screenPos.y / windowHeight;
+            float y0 = std::clamp(mc::Utils::Remap(ny, 0.0f, 0.1f, 0.0f, 1.0f), 0.0f, 1.0f);
+            float y1 = std::clamp(mc::Utils::Remap(1.0f - ny, 0.0f, 0.1f, 0.0f, 1.0f), 0.0f, 1.0f);
+            float y = y0 * y1;
+            commonCPUBuffer.screenPos = XMFLOAT2(screenPos.x, screenPos.y);
+            commonCPUBuffer.flerActive.x = x * y;
+        }
+        else
+        {
+            commonCPUBuffer.flerActive.x = 0.0f;
+        }
+
+        commonCPUBuffer.time += dt;
+        commonGPUBuffer->Update(*gm, commonCPUBuffer);
+    }
+
+    void Game::UpdateParticleSystem(float dt)
+    {
+        // Update the particle system
+        XMFLOAT3 emitDir;
+        XMStoreFloat3(&emitDir, ship.GetForward() * -1.0);
+        XMFLOAT3 startVel;
+        XMStoreFloat3(&startVel, ship.GetVelocity());
+        particleSystem->Update(ship.GetPosition(), startVel, emitDir, camera->GetPosition(), gameTime, dt, ship.GetThrust() / ship.GetThrustMax());
+    }
+
+
+    void Game::Draw3DScene(float fov)
+    {
+        gm->SetRasterizerStateCullBack();
+        msaaBuffer->Bind(*gm);
+        msaaBuffer->Clear(*gm, 0.1f, 0.1f, 0.3f);
+        
+        // Draw sky
+        {
+            // Compute the sky coord system so is always facing the camera
+            // Compute the scale so the quad fill the screen 
+            float a = (camera->GetFarPlane() * 0.5f);
+            float ys = (std::tanf(fov * 0.5f) * a) * 2.0f;
+            float xs = ys * camera->GetAspectRatio();
+
+            XMVECTOR viewDir = camera->GetFront();
+            XMMATRIX translationMat = XMMatrixTranslationFromVector(XMLoadFloat3(&camera->GetPosition()) + (viewDir * a));
+            XMMATRIX rotationMat =
+                XMMATRIX(camera->GetRight(), camera->GetUp(), camera->GetFront(), XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f));
+            XMMATRIX scaleMat = XMMatrixScaling(xs, ys, 1.0f);
+
+            objectCPUBuffer.model = scaleMat * rotationMat * translationMat;
+            objectGPUBuffer->Update(*gm, objectCPUBuffer);
+
+            sm->Get("skybox")->Bind(*gm);
+            gm->SetDepthStencilOff();
+            quadMesh->Draw(*gm);
+        }
+
+        // Draw scene
+        {
+            gm->SetDepthStencilOn();
+            scene->Draw(*gm);
+        }
+
+        // Draw particles
+        {
+            particleIL->Bind(*gm);
+            particleSystem->Draw(*gm);
+            // reset the default vertex shader after particles
+            sm->Get("vert")->Bind(*gm);
+        }
+
+        // Resolve the msaa texture for bloom and post process
+        msaaBuffer->Resolve(*gm);
+    }
+
+    void Game::Begin2DMode()
+    {
+        gm->SetRasterizerStateCullBack();
+        objectCPUBuffer.model = XMMatrixScaling(static_cast<float>(windowWidth), static_cast<float>(windowHeight), 1.0f);
+        cameraCPUBuffer.view = XMMatrixIdentity();
+        cameraCPUBuffer.proj = XMMatrixOrthographicLH(windowWidth, windowHeight, -1, 100);
+        objectGPUBuffer->Update(*gm, objectCPUBuffer);
+        cameraGPUBuffer->Update(*gm, cameraCPUBuffer);
+    }
+
+    void Game::DrawBloom()
+    {
+        // Draw to bloom selector buffer
+        {
+            bloom0Buffer->Bind(*gm);
+            bloom0Buffer->Clear(*gm, 0.0f, 0.0f, 0.0f);
+            sm->Get("bloomSelector")->Bind(*gm);
+            msaaBuffer->BindAsTexture(*gm, 0);
+            quadMesh->Draw(*gm);
+            msaaBuffer->UnbindAsTexture(*gm, 0);
+        }
+
+        // Bloom
+        for (int i = 0; i < 5; i++)
+        {
+            // make horizontal the bloom
+            {
+                commonCPUBuffer.pad0 = 1.0f;
+                commonGPUBuffer->Update(*gm, commonCPUBuffer);
+
+                bloom1Buffer->Bind(*gm);
+                bloom1Buffer->Clear(*gm, 0.0f, 0.0f, 0.0f);
+                sm->Get("bloom")->Bind(*gm);
+                bloom0Buffer->BindAsTexture(*gm, 0);
+                quadMesh->Draw(*gm);
+                bloom0Buffer->UnbindAsTexture(*gm, 0);
+            }
+            // make vertical the bloom
+            {
+                commonCPUBuffer.pad0 = 0.0f;
+                commonGPUBuffer->Update(*gm, commonCPUBuffer);
+
+                bloom0Buffer->Bind(*gm);
+                bloom0Buffer->Clear(*gm, 0.0f, 0.0f, 0.0f);
+                sm->Get("bloom")->Bind(*gm);
+                bloom1Buffer->BindAsTexture(*gm, 0);
+                quadMesh->Draw(*gm);
+                bloom1Buffer->UnbindAsTexture(*gm, 0);
+            }
+        }
+    }
+
+    void Game::DrawPostProcess()
+    {
+        // Draw to backBuffer and apply the post processing
+        gm->BindBackBuffer();
+        gm->Clear(0.3f, 0.1f, 0.1f);
+        sm->Get("postProcess")->Bind(*gm);
+        msaaBuffer->BindAsTexture(*gm, 0);
+        bloom0Buffer->BindAsTexture(*gm, 1);
+        quadMesh->Draw(*gm);
+        bloom0Buffer->UnbindAsTexture(*gm, 1);
+        msaaBuffer->UnbindAsTexture(*gm, 0);
+    }
+
+    void Game::DrawUI(float dt)
+    {
+        // Draw text
+        text->Write(*gm, "FPS: " + std::to_string((int)(1.0f / dt)), -windowWidth * 0.5f, windowHeight * 0.5, 7 * 2, 9 * 2);
+        text->Write(*gm, "Current Lap Time: " + std::to_string(currentLapTime), -windowWidth * 0.5f, (windowHeight * 0.5) - 9 * 2, 7 * 2, 9 * 2);
+        text->Write(*gm, "Last Lap Time   : " + std::to_string(lastLapTime), -windowWidth * 0.5f, (windowHeight * 0.5) - (9*2) * 2, 7 * 2, 9 * 2);
+        text->Write(*gm, "Best Lap Time   : " + std::to_string(bestLapTime), -windowWidth * 0.5f, (windowHeight * 0.5) - (9*3) * 2, 7 * 2, 9 * 2);
+        text->Render(*gm);
+        // reset the default vertex shader after text rendering
+        sm->Get("vert")->Bind(*gm);
     }
 
 }

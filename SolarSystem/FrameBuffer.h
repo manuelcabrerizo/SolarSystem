@@ -16,7 +16,7 @@ namespace mc
         FrameBuffer(const GraphicsManager& gm,
             unsigned int x, unsigned int y,
             unsigned int w, unsigned int h,
-            DXGI_FORMAT format, bool hasMsaa = false, int msaa = 4);
+            DXGI_FORMAT format, bool hasMsaa = false, int msaa = 1);
         void Bind(const GraphicsManager& gm);
         void Clear(const GraphicsManager& gm, float r, float g, float b);
         void BindAsTexture(const GraphicsManager& gm, unsigned int slot);
