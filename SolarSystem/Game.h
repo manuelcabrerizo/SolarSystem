@@ -47,6 +47,7 @@ namespace mc
         GraphicsManager *gm;
         InputManager *im;
         ShaderManager *sm;
+        AudioManager* am;
 
         // Game specific systems
         std::unique_ptr<Camera> camera;

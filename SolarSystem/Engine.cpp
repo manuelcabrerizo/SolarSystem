@@ -9,7 +9,8 @@ namespace mc
           window_{ title, width, height,  
                     reinterpret_cast<std::size_t>(&inputManager_)},
           graphicsManager_{ window_ },
-        shaderManager_{}
+        shaderManager_{},
+        audioManager_{}
     {
     }
 
@@ -30,6 +31,10 @@ namespace mc
         return shaderManager_;
     }
 
+    AudioManager& Engine::GetAudioManager()
+    {
+        return audioManager_;
+    }
 
     bool Engine::IsRunning()
     {

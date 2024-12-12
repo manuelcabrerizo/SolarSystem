@@ -1,7 +1,6 @@
 #include "Utils.h"
 #include <fstream>
 
-
 namespace mc
 {
     File::File(const std::string& filepath)
@@ -74,5 +73,4 @@ namespace mc
         return Lerp(outMin, outMax, t);
 
     }
-
 }

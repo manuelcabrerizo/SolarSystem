@@ -3,6 +3,7 @@
 #include "GraphicsManager.h"
 #include "InputManager.h"
 #include "ShaderManager.h"
+#include "AudioManager.h"
 
 #include "ConstBuffer.h"
 #include "VertexBuffer.h"
@@ -29,6 +30,7 @@ namespace mc
         GraphicsManager& GetGraphicsManager();
         InputManager& GetInputManager();
         ShaderManager& GetShaderManager();
+        AudioManager& GetAudioManager();
         bool IsRunning();
         static bool isRunning;
     private:
@@ -36,6 +38,7 @@ namespace mc
         Window window_;
         GraphicsManager graphicsManager_;
         ShaderManager shaderManager_;
+        AudioManager audioManager_;
     };
 }
 

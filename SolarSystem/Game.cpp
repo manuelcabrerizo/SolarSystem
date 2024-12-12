@@ -12,6 +12,7 @@ namespace mc
         gm = &engine->GetGraphicsManager();
         im = &engine->GetInputManager();
         sm = &engine->GetShaderManager();
+        am = &engine->GetAudioManager();
 
         LoadShaders();
         LoadTextures();
@@ -47,6 +48,8 @@ namespace mc
         cameraGPUBuffer->Bind(*gm);
         lightGPUBuffer->Bind(*gm);
         commonGPUBuffer->Bind(*gm);
+
+        am->Start();
     }
 
     void Game::Run()
@@ -69,6 +72,9 @@ namespace mc
             camera->FollowShip(ship);
 
             UpdateShipLapsAndTimes(dt);
+
+            // update the pich of the ship engine sound and on the ship thrust
+            am->Update(ship.GetThrust() / ship.GetThrustMax());
             
             float shipVel = XMVectorGetX(XMVector3Length(ship.GetVelocity()));
             float fov = mc::Utils::Lerp(camera->GetFovMin(), camera->GetFovMax(), std::clamp(shipVel * shipVel, 0.0f, 1.0f));
@@ -413,9 +419,7 @@ namespace mc
                     }
                     currentLapTime = 0.0f;
                 }
-
             }
-
         }
         lastFrameAngle = angle;
 
