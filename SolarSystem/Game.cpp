@@ -63,21 +63,49 @@ namespace mc
             double currentTime = (double)currentCounter.QuadPart / frequency.QuadPart;
             float dt = static_cast<float>(currentTime - lastTime) * timeScale;
 
+            ProcessGameMode(static_cast<float>(currentTime - lastTime));
+
             // this is to compile the shaders in execution time
             // it check if one of the shaders have been modify and recompile it
             sm->HotReaload(*gm);
 
             // Process the ship and camera movement
             UpdateShip(dt);
-            camera->FollowShip(ship);
 
+            if (freeCamera)
+            {
+                if (targetShip)
+                {
+                    camera->TargteShip(ship);
+                }
+                else
+                {
+                    camera->Update(*im, static_cast<float>(currentTime - lastTime));
+                }
+            }
+            else
+            {
+                camera->FollowShip(ship);
+            }
             UpdateShipLapsAndTimes(dt);
 
             // update the pich of the ship engine sound and on the ship thrust
             am->Update(ship.GetThrust() / ship.GetThrustMax());
             
             float shipVel = XMVectorGetX(XMVector3Length(ship.GetVelocity()));
-            float fov = mc::Utils::Lerp(camera->GetFovMin(), camera->GetFovMax(), std::clamp(shipVel * shipVel, 0.0f, 1.0f));
+            float fov = 0;
+            if (freeCamera)
+            {
+                fov = camera->GetFovMin() + zoom;
+            }
+            else
+            {
+                // Smooth fov changes base on the shipm velocity
+                float currentVel = std::clamp(shipVel * shipVel, 0.0f, 1.0f);
+                fovT += (currentVel - fovT)*0.2f;
+                fov = mc::Utils::Lerp(camera->GetFovMin(), camera->GetFovMax(), fovT);
+            }
+            
             // Update the values of all the const buffers / uniforms for the demo
             UpdateConstBuffers(dt, fov);
             // Update the particle system for the ship
@@ -360,6 +388,48 @@ namespace mc
         trackOuter.SetCullBack(false);
     }
 
+
+    void Game::ProcessGameMode(float dt)
+    {
+        // Pause the game and change camera mode
+        if (im->KeyJustDown(mc::KEY_1))
+        {
+            freeCamera = !freeCamera;
+            zoom = 0;
+        }
+        if (im->KeyJustDown(mc::KEY_2) && freeCamera)
+        {
+            targetShip = !targetShip;
+            zoom = 0;
+        }
+
+        if (im->KeyJustDown(mc::KEY_P))
+        {
+            pause = !pause;
+            if (pause)
+            {
+                am->Pause();
+                timeScale = 0;
+            }
+            else
+            {
+                am->Start();
+                timeScale = 1;
+            }
+        }
+
+        if (targetShip)
+        {
+            if (im->KeyDown(mc::KEY_UP))
+            {
+                zoom -= 0.25f * dt;
+            }
+            if (im->KeyDown(mc::KEY_DOWN))
+            {
+                zoom += 0.25f * dt;
+            }
+        }
+    }
 
     void Game::UpdateShip(float dt)
     {

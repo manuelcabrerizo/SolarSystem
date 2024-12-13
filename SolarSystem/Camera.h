@@ -18,6 +18,8 @@ namespace mc
                float aspectRation);
         void Update(const InputManager& im, float dt);
         void FollowShip(const Ship& ship);
+        void TargteShip(const Ship& ship);
+
         const XMMATRIX& GetViewMat();
         const XMFLOAT3& GetPosition();
         XMFLOAT3 GetTarget();

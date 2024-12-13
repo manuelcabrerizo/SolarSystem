@@ -29,6 +29,20 @@ cbuffer LightConstBuffer : register(b2)
     float3 viewPos;
 };
 
+cbuffer CBParticle : register(b5)
+{
+    float3 eyePosW;
+    float gameTime;
+
+    float3 emitPosW;
+    float timeStep;
+    
+    float3 emitDirW;
+    float thrust;
+    float3 starVelocity;
+    float pad1;
+}
+
 float3 CalcPointLight(float3 color, PointLight light, float3 normal, float3 viewDir, float3 fragPos)
 {
 
@@ -60,7 +74,9 @@ float4 fs_main(PS_Input i) : SV_TARGET
     
     if (colorDiff < 0.2)
     {
-        return float4(textureColor.rgb * 4.0f, 1.0f);
+        
+        float3 bloomColor = float3(10.0, 0.2, 0.2);
+        return float4(lerp(textureColor.rgb, bloomColor, thrust*thrust), 1.0f);
     }
     
         float3 normal = normalize(i.nor);

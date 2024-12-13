@@ -27,6 +27,7 @@ namespace mc
         void LoadFrameBuffers();
         void LoadScene();
 
+        void ProcessGameMode(float dt);
         void UpdateShip(float dt);
         void UpdateShipLapsAndTimes(float dt);
         void UpdateConstBuffers(float dt, float fov);
@@ -126,6 +127,13 @@ namespace mc
 
         bool lapsStart{ false };
         bool firstLap{ true };
+
+        bool freeCamera{ false };
+        bool targetShip{false};
+        bool pause{ false };
+
+        float fovT{ 0.0f };
+        float zoom{0.0f};
     };
 }
 

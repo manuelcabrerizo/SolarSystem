@@ -79,6 +79,18 @@ namespace mc
         view_ = XMMatrixLookAtLH(pos, pos + front_, up_);
     }
 
+    void Camera::TargteShip(const Ship& ship)
+    {
+        XMFLOAT3 shipPosition = ship.GetPosition();
+        XMVECTOR shipPos = XMLoadFloat3(&shipPosition);
+        XMVECTOR position = XMLoadFloat3(&position_);
+        front_ = XMVector3Normalize(shipPos - position);
+        right_ = XMVector3Normalize(XMVector3Cross(worldUp_, front_));
+        up_ = XMVector3Normalize(XMVector3Cross(front_, right_));
+        view_ = XMMatrixLookAtLH(position, shipPos, worldUp_);
+    }
+
+
     const XMMATRIX& Camera::GetViewMat()
     {
         return view_;
