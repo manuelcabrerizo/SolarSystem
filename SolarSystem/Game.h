@@ -40,8 +40,8 @@ namespace mc
         void DrawPostProcess();
         void DrawUI(float dt);
 
-        const int windowWidth{ 1366 };
-        const int windowHeight{ 768 };
+        const int windowWidth{ 1920 };
+        const int windowHeight{ 1080 };
 
         // Systems
         std::unique_ptr<Engine> engine;
