@@ -1,8 +1,7 @@
-Solar System Racing 
+Solar System Racing
 
-Videogame develope in C++ using D3D11 and XAudio2
 
-With Great Focus on HLSL and shader programming
+Videogame develope in C++ using D3D11 and XAudio2 with great focus on HLSL and shader programming
 
 [Video Demo of Solar System Racing](https://www.youtube.com/watch?v=_oJ10vLunMU)
 
